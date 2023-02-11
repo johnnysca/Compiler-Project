@@ -1,0 +1,1 @@
+main var x <- 23; var y <- 4; (x+y) .

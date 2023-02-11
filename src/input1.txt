@@ -1,0 +1,1 @@
+main var i <- 2 * 3; var abracadabra <- 7; (((abracadabra * i))); i-5-1 .

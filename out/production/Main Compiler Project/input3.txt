@@ -1,0 +1,1 @@
+main var abc <- 12; var bc <- 23; var c <- 2; ((((bc * 2) + abc) - 7) /5) + c .
