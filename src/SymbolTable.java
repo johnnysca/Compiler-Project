@@ -4,18 +4,26 @@ public class SymbolTable {
     private HashMap<String, Integer> keywords;
     private HashMap<Integer, String> TokenToString;
     private HashMap<Integer, String> relOps;
-    private HashMap<String, Integer> allOtherVars;
+    private HashMap<String, Integer> vars;
 
     private HashMap<String, Integer> strings;
 
     private HashMap<Integer, String> ids;
+    private HashMap<Character, String> opcodeToString;
+    private HashMap<Integer, Integer> constantToInstructionNum;
+    private HashMap<String, Integer> identifierToInstructionNum;
+
     SymbolTable(){
         keywords = new HashMap<>();
         TokenToString = new HashMap<>();
         relOps = new HashMap<>();
-        allOtherVars = new HashMap<>();
+        vars = new HashMap<>();
         strings = new HashMap<>();
         ids = new HashMap<>();
+        opcodeToString = new HashMap<>();
+        constantToInstructionNum = new HashMap<>();
+        identifierToInstructionNum = new HashMap<>();
+
         keywords.put("main", Tokens.mainToken);
         keywords.put("var", Tokens.varToken);
         keywords.put("then", Tokens.thenToken);
@@ -56,6 +64,12 @@ public class SymbolTable {
         relOps.put(Tokens.leqToken, "<=");
         relOps.put(Tokens.gtrToken, ">");
         relOps.put(Tokens.geqToken, ">=");
+
+        opcodeToString.put('c', "const");
+        opcodeToString.put('+', "add");
+        opcodeToString.put('-', "sub");
+        opcodeToString.put('*', "mul");
+        opcodeToString.put('/', "div");
     }
     public boolean isKeyword(String s){
         return keywords.containsKey(s);
@@ -66,7 +80,7 @@ public class SymbolTable {
     public String getStringFromToken(int token) { return TokenToString.get(token); }
     public String getRelOp(int token) { return relOps.get(token); }
     public void insertToSymbolTable(String varName, Integer val){
-        allOtherVars.put(varName, val);
+        vars.put(varName, val);
     }
     public String IdToString(int id){
         return ids.get(id);
@@ -75,6 +89,27 @@ public class SymbolTable {
         return strings.get(s);
     }
     public int lookup(String key){
-        return allOtherVars.get(key);
+        return vars.get(key);
+    }
+    public String getOpcodeAsString(char key){
+        return opcodeToString.get(key);
+    }
+    public boolean checkIfInstructionExists(int key){ // check if the constant is already defined in the symbol table. e.x. 0 : const #2
+        return constantToInstructionNum.containsKey(key);
+    }
+    public int getInstructionForConstant(int key){ // gets the instructionNum mapped to the constant
+        return constantToInstructionNum.get(key);
+    }
+    public void addConstantToInstructionNum(int key, int value){ // adds the instruction generate to the constant symbol table
+        constantToInstructionNum.put(key, value);
+    }
+    public boolean checkIfIdentifierInstructionExists(String key){
+        return identifierToInstructionNum.containsKey(key);
+    }
+    public int getInstructionForIdentifier(String key){
+        return identifierToInstructionNum.get(key);
+    }
+    public void addIdentifierToInstructionNum(String key, int val){
+        identifierToInstructionNum.put(key, val);
     }
 }

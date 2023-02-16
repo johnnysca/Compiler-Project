@@ -1,9 +1,23 @@
+import java.util.List;
+import java.util.HashMap;
 public class Parser {
     private Tokenizer myTokenizer;
     private int inputSym;
-    private String seenIdent;
+    private String seenIdent; // store identifier just seen
+    private int val; // store value just seen
+    private int instructionNum; // to track what instruction number this new instruction will be
+    private BasicBlock bb; // current Basic Block obj
+    private int basicBlockNum; // current Basic Block number
+    private HashMap<Integer, List<Integer>> BBMapping; // key: Basic Block Num, val: list of children Basic Blocks
+    public HashMap<Integer, BasicBlock> BBS; // key: Basic Block Num, val: actual Basic Block
     public Parser(String filename) {
         myTokenizer = new Tokenizer(filename);
+        BBMapping = new HashMap<>();
+        BBS = new HashMap<>();
+        BBS.put(0, new BasicBlock());
+        instructionNum = 0;
+        bb = new BasicBlock();
+        basicBlockNum = 1; // constants will automatically be added to BB0 guaranteed so start from BB1
         next();
         computation();
     }
@@ -17,126 +31,302 @@ public class Parser {
         else myTokenizer.Error("SyntaxErr, Expected '" + myTokenizer.symbolTable.getStringFromToken(token) + "' but missing");
     }
     public void computation(){
+        BBS.put(basicBlockNum, bb);
         checkFor(Tokens.mainToken);
-        int val;
-        while(inputSym == Tokens.varToken){
-            next();
-            checkFor(Tokens.ident);
-            seenIdent = myTokenizer.getIdentifier();
-            checkFor(Tokens.becomesToken);
-            val = expression();
-            myTokenizer.symbolTable.insertToSymbolTable(seenIdent, val);
-            checkFor(Tokens.semiToken);
+        while(inputSym == Tokens.varToken || inputSym == Tokens.arrToken){
+            varDecl();
         }
-        val = expression();
-        System.out.println(val);
-        while(inputSym == Tokens.semiToken){
-            next();
-            val = expression();
-            System.out.println(val);
-        }
+        checkFor(Tokens.beginToken);
+        statSequence();
+        checkFor(Tokens.endToken);
         checkFor(Tokens.periodToken);
     }
-    public int expression(){
-        int val = term();
-        while(inputSym == Tokens.plusToken || inputSym == Tokens.minusToken){
-            if(inputSym == Tokens.plusToken){
-                next();
-                val += term();
-            }
-            else{
-                next();
-                val -= term();
-            }
-        }
-        return val;
-    }
-    public int term(){
-        int val = factor();
-        while(inputSym == Tokens.timesToken || inputSym == Tokens.divToken){
-            if(inputSym == Tokens.timesToken){
-                next();
-                val *= factor();
-            }
-            else{
-                next();
-                val /= factor();
-            }
-        }
-        return val;
-    }
-    public int factor(){
-        int val = 0;
+    public void varDecl(){
+        typeDecl();
         if(inputSym == Tokens.ident){
-//            seenIdent = myTokenizer.getIdentifier();
-//            val = myTokenizer.lookupSymbolTable(seenIdent);
-//            next();
-            designator();
-        }
-        else if(inputSym == Tokens.number){
-            val = myTokenizer.getNumber();
+            seenIdent = myTokenizer.getIdentifier();
+            myTokenizer.symbolTable.insertToSymbolTable(seenIdent, 0);
             next();
+        }
+        while(inputSym == Tokens.commaToken){
+            next();
+            seenIdent = myTokenizer.getIdentifier();
+            myTokenizer.symbolTable.insertToSymbolTable(seenIdent, 0);
+            next();
+        }
+        checkFor(Tokens.semiToken);
+    }
+    public void typeDecl(){
+        if(inputSym == Tokens.varToken){
+            next();
+        }
+        else if(inputSym == Tokens.arrToken){
+            next();
+            checkFor(Tokens.openbracketToken);
+            if(inputSym == Tokens.number){
+                val = myTokenizer.getNumber();
+                next();
+            }
+            checkFor(Tokens.closebracketToken);
+            while(inputSym == Tokens.openbracketToken){
+                next();
+                val = myTokenizer.getNumber();
+                next();
+                checkFor(Tokens.closebracketToken);
+            }
+        }
+        else{
+            myTokenizer.Error("Expected var or array declaration");
+        }
+    }
+    public void statSequence(){
+        statement();
+        //next();
+        System.out.println(inputSym);
+        while(inputSym == Tokens.semiToken){
+            next(); // consume semi
+            statement();
+            //next(); // consume last term we saw
+        }
+        if(inputSym == Tokens.semiToken) next(); // optional ;
+    }
+    public void statement(){
+        if(inputSym == Tokens.letToken){
+            System.out.println(inputSym);
+            assignment();
+            System.out.println(inputSym);
+        }
+        else if(inputSym == Tokens.ifToken){
+            ifStatement();
+        }
+        else if(inputSym == Tokens.whileToken){
+            whileStatement();
+        }
+        else if(inputSym == Tokens.returnToken){
+            returnStatement();
+        }
+        else{
+            myTokenizer.Error("Expected let, if, while, or return statement");
+        }
+    }
+    public void assignment(){
+        next();
+        int leftInstruction, rightInstruction, rootInstruction;
+        if(inputSym == Tokens.ident){
+            Node desNode = designator(); // designator node will contain LHS of <-
+            System.out.println(desNode.data);
+            checkFor(Tokens.becomesToken);
+
+            Node expr = expression(); // will contain a tree of the expression we saw
+            System.out.println("here");
+            System.out.println(expr.data);
+            if(expr.left != null)
+                System.out.println(expr.left.data);
+            else System.out.println(expr.left);
+            if(expr.right != null)
+                System.out.println(expr.right.data);
+            else System.out.println(expr.right);
+            bb = BBS.get(basicBlockNum);
+
+            if(!expr.constant){ // root not a constant meaning its a +, -, *, / or identifier. constants would have already generated their instruction in factor
+                System.out.println("root not a constant");
+                if(expr.left == null){ // if the root is an identifier
+                    System.out.println("no left expr");
+                    if(!bb.identifierInstructionExists((String) expr.data)){
+                        if(!bb.constantinstructionExists(0)){
+                            bb = BBS.get(0);
+                            System.out.println("No value was assigned to variable. Will be defaulted to 0");
+                            bb.addConstantToSymbolTable(0, instructionNum);
+                            bb.addStatement(new Instruction(instructionNum, bb.getOpCode('c'), 0)); // c just means constant
+                            instructionNum++;
+                        }
+                        bb = BBS.get(basicBlockNum);
+                        bb.addIdentifierToSymbolTable((String) desNode.data, BBS.get(0).getConstantInstructionNum(0));
+                    }
+                    else {
+                        rootInstruction = bb.getIdentifierInstructionNum((String) expr.data);
+                        System.out.println("root instr " + rootInstruction);
+                        bb.addIdentifierToSymbolTable((String) desNode.data, rootInstruction);
+                    }
+                    return;
+                }
+                if(!expr.left.constant){ // if its an identifier check to see if an instruction was previously generated
+                    System.out.println("left not a constant " + expr.left.data);
+                    if(!bb.identifierInstructionExists((String) expr.left.data)){ // identifier used before it was assigned a value default to 0
+                        System.out.println("no identifier instruction");
+                        if(!bb.constantinstructionExists(0)){ // default val to 0
+                            bb = BBS.get(0);
+                            System.out.println("No value was assigned to variable. Will be defaulted to 0");
+                            bb.addConstantToSymbolTable(0, instructionNum);
+                            bb.addStatement(new Instruction(instructionNum, bb.getOpCode('c'), 0)); // c just means constant
+                            instructionNum++;
+                        }
+                        bb = BBS.get(basicBlockNum);
+                        bb.addIdentifierToSymbolTable((String) expr.left.data, BBS.get(0).getConstantInstructionNum(0));
+                        leftInstruction = bb.getIdentifierInstructionNum((String) expr.left.data);
+                    }
+                    else{
+                        System.out.println("instruction exists, just get");
+                        leftInstruction = bb.getIdentifierInstructionNum((String) expr.left.data);
+                        System.out.println("done getting instruction");
+                    }
+                }
+                else leftInstruction = BBS.get(0).getConstantInstructionNum((int) expr.left.data); // left side is a constant
+                if(!expr.right.constant){ // right is an identifier
+                    System.out.println("right not a constant");
+                    if(!bb.identifierInstructionExists((String) expr.right.data)){ // unassigned identifier on right side
+                        System.out.println("right has no identifier instruction");
+                        if(!bb.constantinstructionExists(0)){ // default identifier value 0
+                            bb = BBS.get(0);
+                            System.out.println("No value was assigned to variable. Will be defaulted to 0");
+                            bb.addConstantToSymbolTable(0, instructionNum);
+                            bb.addStatement(new Instruction(instructionNum, bb.getOpCode('c'), 0)); // c just means constant
+                            instructionNum++;
+                        }
+                        bb = BBS.get(basicBlockNum);
+                        bb.addIdentifierToSymbolTable((String) expr.right.data, BBS.get(0).getConstantInstructionNum(0));
+                        rightInstruction = bb.getIdentifierInstructionNum((String) expr.right.data);
+                    }
+                    else{
+                        System.out.println("right has instruction for ident");
+                        rightInstruction = bb.getIdentifierInstructionNum((String) expr.right.data);
+                        System.out.println("done getting right instruction");
+                    }
+                    //bb.addStatement(new Instruction(instructionNum, bb.getOpCode((char) expr.data), leftInstruction, rightInstruction));
+                }
+                else{
+                    System.out.println("right is a constant");
+                    rightInstruction = BBS.get(0).getConstantInstructionNum((int) expr.right.data);
+                    System.out.println("done with right constant");
+                }
+                //bb.addStatement(new Instruction(instructionNum, ));
+                //bb.addIdentifierToSymbolTable((String) desNode.data, bb.getConstantInstructionNum((Integer) expr.data)); // adds
+                System.out.println("adding to statement with " + instructionNum + " " + bb.getOpCode((Character) expr.data) + " " +leftInstruction + " " + rightInstruction) ;
+                bb.addStatement(new Instruction(instructionNum, bb.getOpCode((Character) expr.data), leftInstruction, rightInstruction));
+                bb.addIdentifierToSymbolTable((String) desNode.data, instructionNum);
+                System.out.println(desNode.data + " " + bb.getIdentifierInstructionNum((String) desNode.data));
+                instructionNum++;
+            }
+            else {
+                System.out.println("erroring here?");
+                System.out.println(desNode.data);
+                System.out.println(expr.data);
+                System.out.println(BBS.get(0).constantinstructionExists((int) expr.data));
+                bb.addIdentifierToSymbolTable((String) desNode.data, BBS.get(0).getConstantInstructionNum((int) expr.data));
+                System.out.println("no");
+            }
+            // generate the instruction based on the expr we got and add it to the basic block
+            // then add key: desNode.data, value: instruction number for the instruction we generated from expr and add that to the BasicBlock symbol table
+        }
+        else{
+            myTokenizer.Error("Expected identifier");
+        }
+        System.out.println(inputSym);
+        System.out.println("leaving assignment");
+    }
+    public Node designator(){
+        seenIdent = myTokenizer.getIdentifier();
+        next();
+        while(inputSym == Tokens.openbracketToken){
+            next();
+            expression();
+            checkFor(Tokens.closebracketToken);
+        }
+        return new Node(seenIdent, false);
+    }
+    public Node expression(){
+        System.out.println("going to term");
+        Node term1 = term();
+        System.out.println("back from term");
+
+        while(inputSym == Tokens.plusToken || inputSym == Tokens.minusToken){
+            Node op = null;
+            if(inputSym == Tokens.plusToken){
+                op = new Node('+', false);
+            }
+            else{
+                op = new Node('-', false);
+            }
+            next();
+            Node term2 = term();
+            op.left = term1;
+            op.right = term2;
+            return op;
+            // if constant add to BB0 else add to current BB
+            // generate and return instruction for either constants or term1, term2 if theyre identifiers
+        }
+        return term1; // return the instruction for term1
+    }
+    public Node term(){
+        System.out.println("going to factor");
+        Node factor1 = factor();
+        System.out.println("back from factor");
+
+        while(inputSym == Tokens.timesToken || inputSym == Tokens.divToken){
+            Node op = null;
+            if(inputSym == Tokens.timesToken){
+                op = new Node('*', false);
+            }
+            else{
+                op = new Node('/', false);
+            }
+            next();
+            Node factor2 = factor();
+            op.left = factor1;
+            op.right = factor2;
+            return op;
+        }
+        System.out.println("leaving term");
+        return factor1;
+    }
+    public Node factor(){ // returns either node or instruction
+        System.out.println("in factor");
+        Node ret = null;
+        if(inputSym == Tokens.ident){
+            System.out.println("going to designator");
+            ret = designator();
+            System.out.println("back from designator");
+            bb = BBS.get(basicBlockNum);
+            //if(bb.s)
+        }
+        else if(inputSym == Tokens.number){ // generate instruction for constants here if it is not already in BB0
+            System.out.println("saw num");
+            BasicBlock basicBlock0 = BBS.get(0);
+            val = myTokenizer.getNumber();
+            if(!basicBlock0.constantinstructionExists(val)){ // instruction not created for constant before so create it
+                System.out.println("creating instruction");
+                basicBlock0.addConstantToSymbolTable(val, instructionNum);
+                //System.out.println(val + " " + instructionNum + " " + basicBlock0.getOpCode('c'));
+                System.out.println("added to sym table");
+                basicBlock0.addStatement(new Instruction(instructionNum, basicBlock0.getOpCode('c'), val)); // c just means constant
+                System.out.println("added  to statement");
+                instructionNum++;
+
+            }
+            ret = new Node(val, true);
+            System.out.println("before consuming num " + inputSym);
+            next(); // cosume number
+            System.out.println("after consuming num " + inputSym);
         }
         else if(inputSym == Tokens.openParenToken){
             next();
-            val = expression();
+            ret = expression();
             checkFor(Tokens.closeParenToken);
         }
-        // else if funcCall --- TO BE ADDED
         else{
-            myTokenizer.Error("SyntaxErr");
+            myTokenizer.Error("Expected identifier, number or ( for expression");
         }
-        return val;
+        System.out.println("leaving factor");
+        System.out.println(ret.data);
+        return ret;
     }
-    public void designator(){
-        //checkFor(Tokens.ident);
-        seenIdent = myTokenizer.getIdentifier();
-        while(inputSym == Tokens.openbracketToken){ // '['
-            next(); // consume bracket
-            int val = expression(); // get expression
-            checkFor(Tokens.closebracketToken); // expected ']'
-        }
-    }
-    public void relation(){
-        int val1 = expression();
-        if(inputSym == Tokens.eqlToken || inputSym == Tokens.neqToken || inputSym == Tokens.lssToken ||
-           inputSym == Tokens.leqToken || inputSym == Tokens.gtrToken || inputSym == Tokens.geqToken){
-            String relOp = myTokenizer.symbolTable.getRelOp(inputSym);
-            next();
-        }
-        else{
-            myTokenizer.Error("SyntaxErr. Missing relOp");
-        }
-        int val2 = expression();
-    }
-    public void assignment(){
-        checkFor(Tokens.letToken);
-        designator();
-
-        checkFor(Tokens.becomesToken);
-        int val = expression();
-        seenIdent = myTokenizer.getIdentifier();
-        myTokenizer.symbolTable.insertToSymbolTable(seenIdent, val);
-    }
-    public void statement(){
+    public void ifStatement(){
 
     }
-    public void statSequence(){
+    public void whileStatement(){
 
     }
-    public void typeDecl(){
-
-    }
-    public void varDecl(){
-
-    }
-    public void funcDecl(){
-
-    }
-    public void formalParam(){
-
-    }
-    public void funcBody(){
+    public void returnStatement(){
 
     }
 }

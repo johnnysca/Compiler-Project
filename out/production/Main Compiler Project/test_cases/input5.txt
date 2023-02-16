@@ -1,0 +1,9 @@
+main
+var a, b, c, d, e;
+{
+let a <- 7;
+let b <- a;
+let c <- b;
+let d <- b + c;
+let e <- a + b
+}

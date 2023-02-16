@@ -1,0 +1,8 @@
+main
+var x,y,a,b;
+{
+let y <- 2;
+let x <- y + 1;
+let b <- x +y;
+let a <- b-3
+}.

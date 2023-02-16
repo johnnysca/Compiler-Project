@@ -20,7 +20,7 @@ public class Tokenizer {
     }
 
     public int getNext() {
-        while (inputSym == ' ') next();
+        while (inputSym == ' ' || inputSym == '\n') next();
         if (inputSym == Tokens.eofToken) return Tokens.eofToken;
         else {
             switch (inputSym) {
