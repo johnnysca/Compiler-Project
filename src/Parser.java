@@ -1,5 +1,7 @@
 import java.util.List;
 import java.util.HashMap;
+import java.util.Scanner;
+
 public class Parser {
     private Tokenizer myTokenizer;
     private int inputSym;
@@ -10,6 +12,7 @@ public class Parser {
     private int basicBlockNum; // current Basic Block number
     private HashMap<Integer, List<Integer>> BBMapping; // key: Basic Block Num, val: list of children Basic Blocks
     public HashMap<Integer, BasicBlock> BBS; // key: Basic Block Num, val: actual Basic Block
+    private Scanner scanner;
     public Parser(String filename) {
         myTokenizer = new Tokenizer(filename);
         BBMapping = new HashMap<>();
@@ -18,6 +21,7 @@ public class Parser {
         instructionNum = 0;
         bb = new BasicBlock();
         basicBlockNum = 1; // constants will automatically be added to BB0 guaranteed so start from BB1
+        scanner = new Scanner(System.in);
         next();
         computation();
     }
@@ -296,7 +300,6 @@ public class Parser {
                 basicBlock0.addConstantToSymbolTable(val, instructionNum);
                 basicBlock0.addStatement(new Instruction(instructionNum, basicBlock0.getOpCode('c'), val)); // c just means constant
                 instructionNum++;
-
             }
             ret = new Node(val, true);
             next(); // eat number
@@ -322,6 +325,13 @@ public class Parser {
         next(); // eat call
         if(inputSym == Tokens.inputNum){
             next(); // eat InputNum
+            val = scanner.nextInt();
+            BasicBlock basicBlock0 = BBS.get(0);
+            if(!basicBlock0.constantinstructionExists(val)){ // instruction not created for constant before so create it
+                basicBlock0.addConstantToSymbolTable(val, instructionNum);
+                basicBlock0.addStatement(new Instruction(instructionNum, basicBlock0.getOpCode('c'), val)); // c just means constant
+                instructionNum++;
+            }
             bb.addStatement(new Instruction(instructionNum, "InputNum", -1, -1));
             bb.addIdentifierToSymbolTable(seenIdent, instructionNum);
             instructionNum++;
