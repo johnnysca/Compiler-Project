@@ -90,7 +90,9 @@ public class Parser {
     public void statement(){
         if(inputSym == Tokens.letToken){
             assignment();
-            System.out.println(inputSym);
+        }
+        else if(inputSym == Tokens.callToken){
+            funcCall();
         }
         else if(inputSym == Tokens.ifToken){
             ifStatement();
@@ -106,7 +108,7 @@ public class Parser {
         }
     }
     public void assignment(){
-        next();
+        next(); // eat let
         int leftInstruction, rightInstruction, rootInstruction;
         if(inputSym == Tokens.ident) {
             System.out.println("going to designator");
@@ -221,7 +223,6 @@ public class Parser {
         else{
             myTokenizer.Error("Expected identifier");
         }
-        System.out.println(inputSym);
         System.out.println("leaving assignment");
     }
     public Node designator(){
@@ -305,11 +306,50 @@ public class Parser {
             ret = expression();
             checkFor(Tokens.closeParenToken);
         }
+        else if(inputSym == Tokens.callToken){
+            System.out.println("going to funcCall");
+            funcCall();
+            System.out.println("back from funcCall");
+        }
         else{
-            myTokenizer.Error("Expected identifier, number or ( for expression");
+            myTokenizer.Error("Expected identifier, number, ( for expression, or funcCall");
         }
         System.out.println("leaving factor");
         return ret;
+    }
+    public void funcCall(){
+        System.out.println("in funcCall");
+        next(); // eat call
+        if(inputSym == Tokens.inputNum){
+            next(); // eat InputNum
+            bb.addStatement(new Instruction(instructionNum, "InputNum", -1, -1));
+            bb.addIdentifierToSymbolTable(seenIdent, instructionNum);
+            instructionNum++;
+            checkFor(Tokens.openParenToken);
+            checkFor(Tokens.closeParenToken);
+        }
+        else if(inputSym == Tokens.outputNum){
+            next(); // eat outputNum
+            seenIdent = myTokenizer.getIdentifier();
+            bb.addStatement(new Instruction(instructionNum, "OutputNum", -1, -1));
+            bb.addIdentifierToSymbolTable(seenIdent, instructionNum);
+            instructionNum++;
+
+            checkFor(Tokens.openParenToken);
+            seenIdent = myTokenizer.getIdentifier();
+            System.out.println(bb.getIdentifierInstructionNum(seenIdent));
+            next(); // eat identifier
+            checkFor(Tokens.closeParenToken);
+        }
+        else if(inputSym == Tokens.outputNewLine){
+            next();
+            bb.addStatement(new Instruction(instructionNum, "OutputNewLine", -1, -1));
+            instructionNum++;
+            checkFor(Tokens.openParenToken);
+            checkFor(Tokens.closeParenToken);
+            System.out.println(); // print the new line to console
+        }
+        System.out.println("leaving funcCall");
     }
     public void ifStatement(){
 
