@@ -1,5 +1,4 @@
 import java.util.HashMap;
-
 public class SymbolTable {
     private HashMap<String, Integer> keywords;
     private HashMap<Integer, String> TokenToString;
@@ -12,6 +11,7 @@ public class SymbolTable {
     private HashMap<Character, String> opcodeToString;
     private HashMap<Integer, Integer> constantToInstructionNum;
     private HashMap<String, Integer> identifierToInstructionNum;
+    private HashMap<String, Integer> predefinedFunctions;
 
     SymbolTable(){
         keywords = new HashMap<>();
@@ -23,6 +23,7 @@ public class SymbolTable {
         opcodeToString = new HashMap<>();
         constantToInstructionNum = new HashMap<>();
         identifierToInstructionNum = new HashMap<>();
+        predefinedFunctions = new HashMap<>();
 
         keywords.put("main", Tokens.mainToken);
         keywords.put("var", Tokens.varToken);
@@ -70,6 +71,10 @@ public class SymbolTable {
         opcodeToString.put('-', "sub");
         opcodeToString.put('*', "mul");
         opcodeToString.put('/', "div");
+
+        predefinedFunctions.put("InputNum", Tokens.inputNum);
+        predefinedFunctions.put("OutputNum", Tokens.outputNum);
+        predefinedFunctions.put("OutputNewLine", Tokens.outputNewLine);
     }
     public boolean isKeyword(String s){
         return keywords.containsKey(s);
@@ -111,5 +116,11 @@ public class SymbolTable {
     }
     public void addIdentifierToInstructionNum(String key, int val){
         identifierToInstructionNum.put(key, val);
+    }
+    public boolean isPredefinedFunction(String key){
+        return predefinedFunctions.containsKey(key);
+    }
+    public int getPredefinedToken(String key){
+        return predefinedFunctions.get(key);
     }
 }

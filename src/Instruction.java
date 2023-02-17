@@ -5,11 +5,9 @@ public class Instruction {
     private int rightInstruction;
     private int val; // a constants value
     private boolean isConstant;
-    private BasicBlock basicBlock;
 
     Instruction(int instructionNum, String opCode, int leftInstruction, int rightInstruction){ // add the current
         this.instructionNum = instructionNum;
-        //this.opCode = basicBlock.getOpCode(opCode);
         this.opCode = opCode;
         this.leftInstruction = leftInstruction;
         this.rightInstruction = rightInstruction;
@@ -17,24 +15,25 @@ public class Instruction {
         this.isConstant = false;
     }
     Instruction(int instructionNum, String c, int val){ // for constants
-        System.out.println("in constant constructor");
         this.instructionNum = instructionNum;
-        //this.opCode = basicBlock.getOpCode(c);
         this.opCode = c;
+        this.leftInstruction = -1; // to avoid confusion with actual instruction 0
+        this.rightInstruction = -1;
         this.val = val;
         this.isConstant = true;
-        System.out.println("leaving constant constructor");
     }
-
-//    public Instruction(int instructionNum, String opCode, int leftInstruction, int rightInstruction) {
-//        this.instructionNum = instructionNum;
-//        this.opCode = opCode;
-//        this.leftInstruction = leftInstruction;
-//        this.rightInstruction = rightInstruction;
-//        this.val = 0;
-//        this.isConstant = false;
-//    }
-
+    public int getLeftInstruction(){
+        return leftInstruction;
+    }
+    public int getRightInstruction(){
+        return rightInstruction;
+    }
+    public int getInstructionNum(){
+        return instructionNum;
+    }
+    public boolean equals(Instruction instruction2){
+        return this.getLeftInstruction() == instruction2.getLeftInstruction() && this.getRightInstruction() == instruction2.getRightInstruction();
+    }
     public String toString(){
         return "InstructionNum: " + instructionNum + " opcode: " + opCode + " leftInstruction: " + leftInstruction + " rightInstruction: " + rightInstruction + " val: " + val;
     }

@@ -81,18 +81,14 @@ public class Parser {
     }
     public void statSequence(){
         statement();
-        //next();
-        System.out.println(inputSym);
         while(inputSym == Tokens.semiToken){
             next(); // consume semi
             statement();
-            //next(); // consume last term we saw
         }
         if(inputSym == Tokens.semiToken) next(); // optional ;
     }
     public void statement(){
         if(inputSym == Tokens.letToken){
-            System.out.println(inputSym);
             assignment();
             System.out.println(inputSym);
         }
@@ -112,28 +108,33 @@ public class Parser {
     public void assignment(){
         next();
         int leftInstruction, rightInstruction, rootInstruction;
-        if(inputSym == Tokens.ident){
+        if(inputSym == Tokens.ident) {
+            System.out.println("going to designator");
             Node desNode = designator(); // designator node will contain LHS of <-
+            System.out.println("back from designator");
             System.out.println(desNode.data);
             checkFor(Tokens.becomesToken);
 
+            System.out.println("going to expression");
             Node expr = expression(); // will contain a tree of the expression we saw
-            System.out.println("here");
+            System.out.println("back from expression");
+            if(expr == null) return;
             System.out.println(expr.data);
-            if(expr.left != null)
+            if (expr.left != null)
                 System.out.println(expr.left.data);
             else System.out.println(expr.left);
-            if(expr.right != null)
+            if (expr.right != null)
                 System.out.println(expr.right.data);
             else System.out.println(expr.right);
+
             bb = BBS.get(basicBlockNum);
 
-            if(!expr.constant){ // root not a constant meaning its a +, -, *, / or identifier. constants would have already generated their instruction in factor
-                System.out.println("root not a constant");
-                if(expr.left == null){ // if the root is an identifier
-                    System.out.println("no left expr");
-                    if(!bb.identifierInstructionExists((String) expr.data)){
-                        if(!bb.constantinstructionExists(0)){
+            if (!expr.constant) { // root not a constant meaning its a +, -, *, / or identifier. constants would have already generated their instruction in factor
+                System.out.println("root not a constant " + expr.data);
+                if (expr.left == null) { // if the root is an identifier
+                    System.out.println("no left expr " + expr.left);
+                    if (!bb.identifierInstructionExists((String) expr.data)) {
+                        if (!bb.constantinstructionExists(0)) {
                             bb = BBS.get(0);
                             System.out.println("No value was assigned to variable. Will be defaulted to 0");
                             bb.addConstantToSymbolTable(0, instructionNum);
@@ -142,19 +143,18 @@ public class Parser {
                         }
                         bb = BBS.get(basicBlockNum);
                         bb.addIdentifierToSymbolTable((String) desNode.data, BBS.get(0).getConstantInstructionNum(0));
-                    }
-                    else {
+                    } else {
                         rootInstruction = bb.getIdentifierInstructionNum((String) expr.data);
                         System.out.println("root instr " + rootInstruction);
                         bb.addIdentifierToSymbolTable((String) desNode.data, rootInstruction);
                     }
                     return;
                 }
-                if(!expr.left.constant){ // if its an identifier check to see if an instruction was previously generated
+                if (!expr.left.constant) { // if its an identifier check to see if an instruction was previously generated
                     System.out.println("left not a constant " + expr.left.data);
-                    if(!bb.identifierInstructionExists((String) expr.left.data)){ // identifier used before it was assigned a value default to 0
-                        System.out.println("no identifier instruction");
-                        if(!bb.constantinstructionExists(0)){ // default val to 0
+                    if (!bb.identifierInstructionExists((String) expr.left.data)) { // identifier used before it was assigned a value default to 0
+                        System.out.println("left has no identifier instruction");
+                        if (!bb.constantinstructionExists(0)) { // default val to 0
                             bb = BBS.get(0);
                             System.out.println("No value was assigned to variable. Will be defaulted to 0");
                             bb.addConstantToSymbolTable(0, instructionNum);
@@ -164,19 +164,21 @@ public class Parser {
                         bb = BBS.get(basicBlockNum);
                         bb.addIdentifierToSymbolTable((String) expr.left.data, BBS.get(0).getConstantInstructionNum(0));
                         leftInstruction = bb.getIdentifierInstructionNum((String) expr.left.data);
-                    }
-                    else{
-                        System.out.println("instruction exists, just get");
+                    } else {
+                        System.out.println("left has instruction for ident");
                         leftInstruction = bb.getIdentifierInstructionNum((String) expr.left.data);
-                        System.out.println("done getting instruction");
+                        System.out.println("done getting left instruction");
                     }
+                } else {
+                    System.out.println("left is a constant");
+                    leftInstruction = BBS.get(0).getConstantInstructionNum((int) expr.left.data); // left side is a constant
+                    System.out.println("done with left constant");
                 }
-                else leftInstruction = BBS.get(0).getConstantInstructionNum((int) expr.left.data); // left side is a constant
-                if(!expr.right.constant){ // right is an identifier
-                    System.out.println("right not a constant");
-                    if(!bb.identifierInstructionExists((String) expr.right.data)){ // unassigned identifier on right side
+                if (!expr.right.constant) { // right is an identifier
+                    System.out.println("right not a constant " + expr.right.data);
+                    if (!bb.identifierInstructionExists((String) expr.right.data)) { // unassigned identifier on right side
                         System.out.println("right has no identifier instruction");
-                        if(!bb.constantinstructionExists(0)){ // default identifier value 0
+                        if (!bb.constantinstructionExists(0)) { // default identifier value 0
                             bb = BBS.get(0);
                             System.out.println("No value was assigned to variable. Will be defaulted to 0");
                             bb.addConstantToSymbolTable(0, instructionNum);
@@ -186,34 +188,32 @@ public class Parser {
                         bb = BBS.get(basicBlockNum);
                         bb.addIdentifierToSymbolTable((String) expr.right.data, BBS.get(0).getConstantInstructionNum(0));
                         rightInstruction = bb.getIdentifierInstructionNum((String) expr.right.data);
-                    }
-                    else{
+                    } else {
                         System.out.println("right has instruction for ident");
                         rightInstruction = bb.getIdentifierInstructionNum((String) expr.right.data);
                         System.out.println("done getting right instruction");
                     }
-                    //bb.addStatement(new Instruction(instructionNum, bb.getOpCode((char) expr.data), leftInstruction, rightInstruction));
-                }
-                else{
+                } else {
                     System.out.println("right is a constant");
                     rightInstruction = BBS.get(0).getConstantInstructionNum((int) expr.right.data);
                     System.out.println("done with right constant");
                 }
-                //bb.addStatement(new Instruction(instructionNum, ));
-                //bb.addIdentifierToSymbolTable((String) desNode.data, bb.getConstantInstructionNum((Integer) expr.data)); // adds
-                System.out.println("adding to statement with " + instructionNum + " " + bb.getOpCode((Character) expr.data) + " " +leftInstruction + " " + rightInstruction) ;
-                bb.addStatement(new Instruction(instructionNum, bb.getOpCode((Character) expr.data), leftInstruction, rightInstruction));
-                bb.addIdentifierToSymbolTable((String) desNode.data, instructionNum);
-                System.out.println(desNode.data + " " + bb.getIdentifierInstructionNum((String) desNode.data));
-                instructionNum++;
-            }
-            else {
-                System.out.println("erroring here?");
+                System.out.println("adding to statement with: " + instructionNum + " " + bb.getOpCode((Character) expr.data) + " " + leftInstruction + " " + rightInstruction);
+                Instruction instruction = new Instruction(instructionNum, bb.getOpCode((Character) expr.data), leftInstruction, rightInstruction);
+                if (!bb.opInstructionExists(bb.getOpCode((Character) expr.data), instruction)) { // instruction doesnt already exists in opcode LinkedList, then add it
+                    bb.addOpInstruction(bb.getOpCode((Character) expr.data), instruction);
+                    bb.addStatement(new Instruction(instructionNum, bb.getOpCode((Character) expr.data), leftInstruction, rightInstruction));
+                    bb.addIdentifierToSymbolTable((String) desNode.data, instructionNum);
+                    System.out.println(desNode.data + " " + bb.getIdentifierInstructionNum((String) desNode.data));
+                    instructionNum++;
+                } else {
+                    bb.addIdentifierToSymbolTable((String) desNode.data, bb.getOpInstructionNum());
+                }
+            } else {
                 System.out.println(desNode.data);
                 System.out.println(expr.data);
                 System.out.println(BBS.get(0).constantinstructionExists((int) expr.data));
                 bb.addIdentifierToSymbolTable((String) desNode.data, BBS.get(0).getConstantInstructionNum((int) expr.data));
-                System.out.println("no");
             }
             // generate the instruction based on the expr we got and add it to the basic block
             // then add key: desNode.data, value: instruction number for the instruction we generated from expr and add that to the BasicBlock symbol table
@@ -247,7 +247,7 @@ public class Parser {
             else{
                 op = new Node('-', false);
             }
-            next();
+            next(); // eat the op
             Node term2 = term();
             op.left = term1;
             op.right = term2;
@@ -270,7 +270,7 @@ public class Parser {
             else{
                 op = new Node('/', false);
             }
-            next();
+            next(); // eat the op
             Node factor2 = factor();
             op.left = factor1;
             op.right = factor2;
@@ -287,26 +287,18 @@ public class Parser {
             ret = designator();
             System.out.println("back from designator");
             bb = BBS.get(basicBlockNum);
-            //if(bb.s)
         }
         else if(inputSym == Tokens.number){ // generate instruction for constants here if it is not already in BB0
-            System.out.println("saw num");
             BasicBlock basicBlock0 = BBS.get(0);
             val = myTokenizer.getNumber();
             if(!basicBlock0.constantinstructionExists(val)){ // instruction not created for constant before so create it
-                System.out.println("creating instruction");
                 basicBlock0.addConstantToSymbolTable(val, instructionNum);
-                //System.out.println(val + " " + instructionNum + " " + basicBlock0.getOpCode('c'));
-                System.out.println("added to sym table");
                 basicBlock0.addStatement(new Instruction(instructionNum, basicBlock0.getOpCode('c'), val)); // c just means constant
-                System.out.println("added  to statement");
                 instructionNum++;
 
             }
             ret = new Node(val, true);
-            System.out.println("before consuming num " + inputSym);
-            next(); // cosume number
-            System.out.println("after consuming num " + inputSym);
+            next(); // eat number
         }
         else if(inputSym == Tokens.openParenToken){
             next();
@@ -317,7 +309,6 @@ public class Parser {
             myTokenizer.Error("Expected identifier, number or ( for expression");
         }
         System.out.println("leaving factor");
-        System.out.println(ret.data);
         return ret;
     }
     public void ifStatement(){

@@ -52,4 +52,8 @@ public class Tokens {
     static final int beginToken = 150;
     static final int mainToken = 200;
     static final int eofToken = 255;
+
+    static final int inputNum = 300;
+    static final int outputNum = 301;
+    static final int outputNewLine = 302;
 }

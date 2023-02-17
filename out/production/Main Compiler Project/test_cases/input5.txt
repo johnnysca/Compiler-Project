@@ -6,4 +6,4 @@ let b <- a;
 let c <- b;
 let d <- b + c;
 let e <- a + b
-}
+}.

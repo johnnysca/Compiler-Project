@@ -125,16 +125,24 @@ public class Tokenizer {
                     }
                     else if (isAlpha()) {
                         alpha();
+                        System.out.println("in tokenizer alpha " + sb.toString());
                         if (symbolTable.isKeyword(sb.toString())) { // if its a keyword return the Token matched with the keyword
                             //id = symbolTable.getKeywordId(sb.toString());
                             return symbolTable.getKeywordId(sb.toString());
                         }
-                        id = Tokens.ident;
-                        return Tokens.ident;
+                        else if(symbolTable.isPredefinedFunction(sb.toString())){
+                            System.out.println("pre def func");
+                            return symbolTable.getPredefinedToken(sb.toString());
+                        }
+                        else {
+                            id = Tokens.ident;
+                            return Tokens.ident;
+                        }
                     }
                     else {
                         //myFileReader.Error("Unknown character");
                         //id = Tokens.eofToken;
+                        System.out.println("in tokenizer else");
                         return Tokens.eofToken;
                     }
             }
