@@ -123,4 +123,7 @@ public class SymbolTable {
     public int getPredefinedToken(String key){
         return predefinedFunctions.get(key);
     }
+    public HashMap<String, Integer> getIdentifierToInstructionNumHM(){
+        return identifierToInstructionNum;
+    }
 }

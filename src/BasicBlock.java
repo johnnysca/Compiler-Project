@@ -5,6 +5,7 @@ import java.util.List;
 
 public class BasicBlock {
     private List<Instruction> statements;
+    private int BBNum;
     private SymbolTable symbolTable;
     private BasicBlock leftBasicBlock;
     private BasicBlock rightBasicBlock;
@@ -12,6 +13,19 @@ public class BasicBlock {
     private int opInstructionNum; // store the instruction num for an op that already exists. used for CSE (common subexpression elimination)
     BasicBlock(){
         statements = new ArrayList<>();
+        BBNum = 0;
+        symbolTable = new SymbolTable();
+        leftBasicBlock = null;
+        rightBasicBlock = null;
+        opInstructions = new HashMap<>();
+        opInstructions.put("add", new LinkedList<>());
+        opInstructions.put("sub", new LinkedList<>());
+        opInstructions.put("mul", new LinkedList<>());
+        opInstructions.put("div", new LinkedList<>());
+    }
+    BasicBlock(int BBNum){
+        statements = new ArrayList<>();
+        this.BBNum = BBNum;
         symbolTable = new SymbolTable();
         leftBasicBlock = null;
         rightBasicBlock = null;
@@ -23,12 +37,6 @@ public class BasicBlock {
     }
     public void addStatement(Instruction instruction){
         statements.add(instruction);
-    }
-    public BasicBlock getLeftBasicBlock(){
-        return leftBasicBlock;
-    }
-    public BasicBlock getRightBasicBlock(){
-        return rightBasicBlock;
     }
     public SymbolTable getSymbolTable(){
         return symbolTable;
@@ -79,5 +87,17 @@ public class BasicBlock {
     }
     public int getOpInstructionNum(){
         return opInstructionNum;
+    }
+    public void setLeftBasicBlock(BasicBlock basicBlock){
+        leftBasicBlock = basicBlock;
+    }
+    public void setRightBasicBlock(BasicBlock basicBlock){
+        rightBasicBlock = basicBlock;
+    }
+    public BasicBlock getLeftBasicBlock(){
+        return leftBasicBlock;
+    }
+    public BasicBlock getRightBasicBlock(){
+        return rightBasicBlock;
     }
 }

@@ -1,6 +1,4 @@
-import java.util.List;
-import java.util.HashMap;
-import java.util.Scanner;
+import java.util.*;
 
 public class Parser {
     private Tokenizer myTokenizer;
@@ -13,15 +11,23 @@ public class Parser {
     private HashMap<Integer, List<Integer>> BBMapping; // key: Basic Block Num, val: list of children Basic Blocks
     public HashMap<Integer, BasicBlock> BBS; // key: Basic Block Num, val: actual Basic Block
     private Scanner scanner;
+    private Stack<BasicBlock> ifBBS;
+    private Stack<BasicBlock> joinBBS;
     public Parser(String filename) {
         myTokenizer = new Tokenizer(filename);
         BBMapping = new HashMap<>();
         BBS = new HashMap<>();
-        BBS.put(0, new BasicBlock());
+        BBS.put(0, new BasicBlock(0));
+        List<Integer> list = new ArrayList<>();
+        list.add(1);
+        BBMapping.put(0, list);
         instructionNum = 0;
-        bb = new BasicBlock();
         basicBlockNum = 1; // constants will automatically be added to BB0 guaranteed so start from BB1
+        bb = new BasicBlock(basicBlockNum);
+        BBS.get(0).setLeftBasicBlock(bb);
         scanner = new Scanner(System.in);
+        ifBBS = new Stack<>();
+        joinBBS = new Stack<>();
         next();
         computation();
     }
@@ -44,6 +50,8 @@ public class Parser {
         statSequence();
         checkFor(Tokens.endToken);
         checkFor(Tokens.periodToken);
+        bb.addStatement(new Instruction(instructionNum, "end", -1, -1));
+        instructionNum++;
     }
     public void varDecl(){
         typeDecl();
@@ -291,7 +299,7 @@ public class Parser {
             System.out.println("going to designator");
             ret = designator();
             System.out.println("back from designator");
-            bb = BBS.get(basicBlockNum);
+            //bb = BBS.get(basicBlockNum);
         }
         else if(inputSym == Tokens.number){ // generate instruction for constants here if it is not already in BB0
             BasicBlock basicBlock0 = BBS.get(0);
@@ -362,12 +370,146 @@ public class Parser {
         System.out.println("leaving funcCall");
     }
     public void ifStatement(){
+        BasicBlock ifBB = null; // for when we see an if
+        BasicBlock elseBB = null; // for when we see an else
+        BasicBlock joinBB = null; // for when we can join blocks
 
+        next(); // eat if
+        Node rel = relation();
+        // get left and right instructions and generate cmp instruction
+        int leftInstruction = rel.left.constant ? bb.getConstantInstructionNum((int)rel.left.data) : bb.getIdentifierInstructionNum((String) rel.left.data);
+        int rightInstruction = rel.right.constant ? bb.getConstantInstructionNum((int) rel.right.data) : bb.getIdentifierInstructionNum((String) rel.right.data);
+        bb.addStatement(new Instruction(instructionNum, "cmp", leftInstruction, rightInstruction));
+        instructionNum++;
+
+        // generate negation of relOp
+        String relOp = (String) rel.data;
+        if(relOp.equals("==")){
+            relOp = "bne";
+        }
+        else if(relOp.equals("!=")){
+            relOp = "beq";
+        }
+        else if(relOp.equals("<")){
+            relOp = "bge";
+        }
+        else if(relOp.equals("<=")){
+            relOp = "bgt";
+        }
+        else if(relOp.equals(">")){
+            relOp = "ble";
+        }
+        else{
+            relOp = "blt";
+        }
+        // generate branching instruction for if condition not met
+        bb.addStatement(new Instruction(instructionNum, relOp, instructionNum-1, -1)); // left = prev Instruction, right = -1 temporarily
+        instructionNum++;
+
+        ifBBS.push(bb); // store current bb on stack. Wil be used to link ifs and elses later
+        // process if block
+        basicBlockNum++; // new BB for then
+        ifBB = new BasicBlock(basicBlockNum);
+        BBS.put(basicBlockNum, ifBB);
+        bb.setLeftBasicBlock(ifBB); // left child of parent will be if block
+
+        checkFor(Tokens.thenToken);
+
+        statSequence(); // will return once if is done
+        // add branching instruction to skip else
+        bb.addStatement(new Instruction(instructionNum, "bra", -1, -1)); // will branch to the first phi in join. will reassign later
+
+        bb = ifBBS.pop(); // get the parent block of if/else blocks
+
+        if(inputSym == Tokens.elseToken){
+            next(); // eat else
+            basicBlockNum++;
+            elseBB = new BasicBlock(basicBlockNum);
+            BBS.put(basicBlockNum, elseBB);
+            bb.setRightBasicBlock(elseBB); // right child of parent will be else block
+            statSequence();
+        }
+
+        if(inputSym == Tokens.fiToken){ // will need to generate join block and fill in
+            basicBlockNum++;
+            joinBB = new BasicBlock(basicBlockNum);
+            BBS.put(basicBlockNum, joinBB);
+            ifBB.setLeftBasicBlock(joinBB); // if's left child will be join block
+            if(elseBB != null){ // there was an else block generated
+                elseBB.setLeftBasicBlock(joinBB); // else's left child will be join block, compare if and else symbol tables to generate phis
+                // now compare symbol tables to generate phis
+                HashMap<String, Integer> ifHM = ifBB.getSymbolTable().getIdentifierToInstructionNumHM();
+                HashMap<String, Integer> elseHM = elseBB.getSymbolTable().getIdentifierToInstructionNumHM();
+                HashMap<String, Integer> parentHM = bb.getSymbolTable().getIdentifierToInstructionNumHM();
+
+                // compare if to else or parent
+                for(Map.Entry<String, Integer> entry : ifHM.entrySet()){
+                    if(elseHM.containsKey(entry.getKey()) && elseHM.get(entry.getKey()) != entry.getValue()){
+                        joinBB.addStatement(new Instruction(instructionNum, "phi", entry.getValue(), elseHM.get(entry.getKey())));
+                        instructionNum++;
+                    }
+                    else if(!elseHM.containsKey(entry.getKey())){ // compare with parent
+                        if(parentHM.containsKey(entry.getKey()) && parentHM.get(entry.getKey()) != entry.getValue()){
+                            joinBB.addStatement(new Instruction(instructionNum, "phi", entry.getValue(), parentHM.get(entry.getKey())));
+                            instructionNum++;
+                        }
+                    }
+                }
+
+                // compare else to if or parent
+                for(Map.Entry<String, Integer> entry : elseHM.entrySet()){
+                    if(ifHM.containsKey(entry.getKey()) && ifHM.get(entry.getKey()) != entry.getValue()){
+                        joinBB.addStatement(new Instruction(instructionNum, "phi", ifHM.get(entry.getKey()), entry.getValue()));
+                        instructionNum++;
+                    }
+                    else if(!ifHM.containsKey(entry.getKey())){
+                        if(parentHM.containsKey(entry.getKey()) && parentHM.get(entry.getKey()) != entry.getValue()){
+                            joinBB.addStatement(new Instruction(instructionNum, "phi", parentHM.get(entry.getKey()), entry.getValue()));
+                            instructionNum++;
+                        }
+                    }
+                }
+            }
+            else{ // there was no else, so parent symbol table will be compared to left child to generate phis
+                bb.setRightBasicBlock(joinBB);
+                // now compare symbol tables to generate phis
+            }
+            if(!joinBBS.isEmpty()){
+                // join both basic blocks and compare symbol tables
+            }
+            joinBBS.push(joinBB);
+        }
+        else{
+            myTokenizer.Error("SyntaxErr missing fi");
+        }
+
+
+
+        // process else block if any
+
+        // join if and else blocks or join if and parent if theres no else
     }
     public void whileStatement(){
 
     }
     public void returnStatement(){
 
+    }
+    public Node relation(){
+        Node expr1 = expression();
+        if(inputSym == Tokens.eqlToken || inputSym == Tokens.neqToken ||
+                inputSym == Tokens.lssToken || inputSym == Tokens.leqToken||
+                inputSym == Tokens.gtrToken || inputSym == Tokens.geqToken){
+            Node relOp = new Node(myTokenizer.symbolTable.getRelOp(inputSym), false);
+            next(); // eat relOp
+            Node expr2 = expression();
+            relOp.left = expr1;
+            relOp.right = expr2;
+            return relOp;
+        }
+        else{
+            myTokenizer.Error("Expected relOp but missing");
+        }
+        return null; // no relOp
     }
 }
