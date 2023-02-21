@@ -126,4 +126,7 @@ public class SymbolTable {
     public HashMap<String, Integer> getIdentifierToInstructionNumHM(){
         return identifierToInstructionNum;
     }
+    public void createDeepCopySymbolTable(HashMap<String, Integer> toCopy){
+        this.identifierToInstructionNum = new HashMap<>(toCopy);
+    }
 }

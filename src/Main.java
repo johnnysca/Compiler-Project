@@ -10,15 +10,23 @@ public class Main {
         Parser parser = new Parser(filename);
         BasicBlock hm = parser.BBS.get(0);
         BasicBlock hm2 = parser.BBS.get(1);
+        System.out.println(parser.BBS.size());
 
-        System.out.println("---Instructions for BB0---");
-        for(Instruction i : hm.getStatements()){
-            System.out.println(i);
-        }
-        System.out.println();
-        System.out.println("---Instructions for BB1---");
-        for(Instruction i : hm2.getStatements()){
-            System.out.println(i);
+//        System.out.println("---Instructions for BB0---");
+//        for(Instruction i : hm.getStatements()){
+//            System.out.println(i);
+//        }
+//        System.out.println();
+//        System.out.println("---Instructions for BB1---");
+//        for(Instruction i : hm2.getStatements()){
+//            System.out.println(i);
+//        }
+        for(int i = 0; i<parser.BBS.size(); i++){
+            System.out.println("--- Instructions for BB" + i);
+            for(Instruction instruction : parser.BBS.get(i).getStatements()){
+                System.out.println(instruction);
+            }
+            System.out.println();
         }
     }
 }

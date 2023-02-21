@@ -48,6 +48,7 @@ public class Parser {
         }
         checkFor(Tokens.beginToken);
         statSequence();
+        System.out.println(inputSym);
         checkFor(Tokens.endToken);
         checkFor(Tokens.periodToken);
         bb.addStatement(new Instruction(instructionNum, "end", -1, -1));
@@ -100,6 +101,7 @@ public class Parser {
         if(inputSym == Tokens.semiToken) next(); // optional ;
     }
     public void statement(){
+        System.out.println(inputSym);
         if(inputSym == Tokens.letToken){
             assignment();
         }
@@ -108,6 +110,7 @@ public class Parser {
         }
         else if(inputSym == Tokens.ifToken){
             ifStatement();
+            bb = joinBBS.pop();
         }
         else if(inputSym == Tokens.whileToken){
             whileStatement();
@@ -329,7 +332,10 @@ public class Parser {
         return ret;
     }
     public void funcCall(){
+        System.out.println("bbNum " + basicBlockNum);
+        System.out.println(bb.getBBNum());
         System.out.println("in funcCall");
+        System.out.println(inputSym);
         next(); // eat call
         if(inputSym == Tokens.inputNum){
             next(); // eat InputNum
@@ -347,15 +353,22 @@ public class Parser {
             checkFor(Tokens.closeParenToken);
         }
         else if(inputSym == Tokens.outputNum){
+            System.out.println(inputSym);
             next(); // eat outputNum
             seenIdent = myTokenizer.getIdentifier();
+            System.out.println("seee " + seenIdent);
             bb.addStatement(new Instruction(instructionNum, "OutputNum", -1, -1));
             bb.addIdentifierToSymbolTable(seenIdent, instructionNum);
             instructionNum++;
 
+            System.out.println("before");
             checkFor(Tokens.openParenToken);
+            System.out.println("after");
             seenIdent = myTokenizer.getIdentifier();
+            System.out.println(seenIdent);
+            System.out.println(bb.identifierInstructionExists(seenIdent));
             System.out.println(bb.getIdentifierInstructionNum(seenIdent));
+            System.out.println("affffff");
             next(); // eat identifier
             checkFor(Tokens.closeParenToken);
         }
@@ -370,15 +383,25 @@ public class Parser {
         System.out.println("leaving funcCall");
     }
     public void ifStatement(){
+        System.out.println("in ifStatement");
         BasicBlock ifBB = null; // for when we see an if
         BasicBlock elseBB = null; // for when we see an else
         BasicBlock joinBB = null; // for when we can join blocks
 
         next(); // eat if
+        System.out.println("going to relation");
         Node rel = relation();
+        System.out.println("back from relation");
+        System.out.println((String) rel.data);
+        System.out.println((String) rel.left.data);
+        System.out.println((int) rel.right.data);
+
+        System.out.println(rel.left.constant);
+        System.out.println(BBS.get(0).getConstantInstructionNum((int) rel.right.data));
         // get left and right instructions and generate cmp instruction
-        int leftInstruction = rel.left.constant ? bb.getConstantInstructionNum((int)rel.left.data) : bb.getIdentifierInstructionNum((String) rel.left.data);
-        int rightInstruction = rel.right.constant ? bb.getConstantInstructionNum((int) rel.right.data) : bb.getIdentifierInstructionNum((String) rel.right.data);
+        int leftInstruction = rel.left.constant ? BBS.get(0).getConstantInstructionNum((int)rel.left.data) : bb.getIdentifierInstructionNum((String) rel.left.data);
+        int rightInstruction = rel.right.constant ? BBS.get(0).getConstantInstructionNum((int) rel.right.data) : bb.getIdentifierInstructionNum((String) rel.right.data);
+        System.out.println("here");
         bb.addStatement(new Instruction(instructionNum, "cmp", leftInstruction, rightInstruction));
         instructionNum++;
 
@@ -413,9 +436,15 @@ public class Parser {
         BBS.put(basicBlockNum, ifBB);
         bb.setLeftBasicBlock(ifBB); // left child of parent will be if block
 
+        // create deep copy of CSE table
+        ifBB.deepCopyOfOPInstructions(bb.getOpInstructionsHM());
+        ifBB.deepCopyOfSymbolTable(bb.getSymbolTable().getIdentifierToInstructionNumHM());
+
         checkFor(Tokens.thenToken);
 
+        System.out.println("going back to statSequence from ifStatement");
         statSequence(); // will return once if is done
+        System.out.println("back from statSequence in ifStatement");
         // add branching instruction to skip else
         bb.addStatement(new Instruction(instructionNum, "bra", -1, -1)); // will branch to the first phi in join. will reassign later
 
@@ -427,15 +456,24 @@ public class Parser {
             elseBB = new BasicBlock(basicBlockNum);
             BBS.put(basicBlockNum, elseBB);
             bb.setRightBasicBlock(elseBB); // right child of parent will be else block
+            // create deep copy of CSE table
+            elseBB.deepCopyOfOPInstructions(bb.getOpInstructionsHM());
+            elseBB.deepCopyOfSymbolTable(bb.getSymbolTable().getIdentifierToInstructionNumHM());
             statSequence();
         }
 
         if(inputSym == Tokens.fiToken){ // will need to generate join block and fill in
+            System.out.println("here");
+            next(); // eat fi
             basicBlockNum++;
             joinBB = new BasicBlock(basicBlockNum);
             BBS.put(basicBlockNum, joinBB);
             ifBB.setLeftBasicBlock(joinBB); // if's left child will be join block
+            joinBB.deepCopyOfOPInstructions(bb.getOpInstructionsHM());
+            joinBB.deepCopyOfSymbolTable(bb.getSymbolTable().getIdentifierToInstructionNumHM());
+            System.out.println("here2");
             if(elseBB != null){ // there was an else block generated
+                System.out.println("in fi elseBB != null");
                 elseBB.setLeftBasicBlock(joinBB); // else's left child will be join block, compare if and else symbol tables to generate phis
                 // now compare symbol tables to generate phis
                 HashMap<String, Integer> ifHM = ifBB.getSymbolTable().getIdentifierToInstructionNumHM();
@@ -446,11 +484,13 @@ public class Parser {
                 for(Map.Entry<String, Integer> entry : ifHM.entrySet()){
                     if(elseHM.containsKey(entry.getKey()) && elseHM.get(entry.getKey()) != entry.getValue()){
                         joinBB.addStatement(new Instruction(instructionNum, "phi", entry.getValue(), elseHM.get(entry.getKey())));
+                        joinBB.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
                         instructionNum++;
                     }
                     else if(!elseHM.containsKey(entry.getKey())){ // compare with parent
                         if(parentHM.containsKey(entry.getKey()) && parentHM.get(entry.getKey()) != entry.getValue()){
                             joinBB.addStatement(new Instruction(instructionNum, "phi", entry.getValue(), parentHM.get(entry.getKey())));
+                            joinBB.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
                             instructionNum++;
                         }
                     }
@@ -460,29 +500,94 @@ public class Parser {
                 for(Map.Entry<String, Integer> entry : elseHM.entrySet()){
                     if(ifHM.containsKey(entry.getKey()) && ifHM.get(entry.getKey()) != entry.getValue()){
                         joinBB.addStatement(new Instruction(instructionNum, "phi", ifHM.get(entry.getKey()), entry.getValue()));
+                        joinBB.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
                         instructionNum++;
                     }
                     else if(!ifHM.containsKey(entry.getKey())){
                         if(parentHM.containsKey(entry.getKey()) && parentHM.get(entry.getKey()) != entry.getValue()){
                             joinBB.addStatement(new Instruction(instructionNum, "phi", parentHM.get(entry.getKey()), entry.getValue()));
+                            joinBB.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
                             instructionNum++;
                         }
                     }
                 }
             }
             else{ // there was no else, so parent symbol table will be compared to left child to generate phis
+                System.out.println("here3 else");
                 bb.setRightBasicBlock(joinBB);
                 // now compare symbol tables to generate phis
+                HashMap<String, Integer> parentHM = bb.getSymbolTable().getIdentifierToInstructionNumHM();
+                HashMap<String, Integer> ifHM = ifBB.getSymbolTable().getIdentifierToInstructionNumHM();
+                System.out.println("t");
+
+                System.out.println("everything in ifHM");
+                for(Map.Entry<String, Integer> entry : ifHM.entrySet()){
+                    System.out.println(entry.getKey() + " " + entry.getValue());
+                }
+
+                System.out.println("\neverything in parentHM");
+                for(Map.Entry<String, Integer> entry : parentHM.entrySet()){
+                    System.out.println(entry.getKey() + " " + entry.getValue());
+                }
+
+
+                for(Map.Entry<String, Integer> entry : ifHM.entrySet()){
+                    if(entry.getValue() != parentHM.get(entry.getKey())){
+                        joinBB.addStatement(new Instruction(instructionNum, "phi", entry.getValue(), parentHM.get(entry.getKey())));
+                        joinBB.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
+                        instructionNum++;
+                    }
+                }
             }
+            System.out.println("r");
             if(!joinBBS.isEmpty()){
                 // join both basic blocks and compare symbol tables
+                System.out.println("ex");
+                HashMap<String, Integer> prevJoinHM = joinBBS.pop().getSymbolTable().getIdentifierToInstructionNumHM();
+                HashMap<String, Integer> currJoinHM = joinBB.getSymbolTable().getIdentifierToInstructionNumHM();
+                HashMap<String, Integer> parentHM = bb.getSymbolTable().getIdentifierToInstructionNumHM();
+
+                basicBlockNum++;
+                BasicBlock mergedJoin = new BasicBlock(basicBlockNum); // join containing left and right joins
+
+                for(Map.Entry<String, Integer> entry : prevJoinHM.entrySet()){ // generating phis by comparing preJoin to currJoin or parent
+                    if(!currJoinHM.containsKey(entry.getKey())){
+                        if(parentHM.containsKey(entry.getKey()) && parentHM.get(entry.getKey()) != entry.getValue()) {
+                            mergedJoin.addStatement(new Instruction(instructionNum, "phi", entry.getValue(), parentHM.get(entry.getKey())));
+                            mergedJoin.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
+                            instructionNum++;
+                        }
+                    }
+                    else if(currJoinHM.containsKey(entry.getKey()) && currJoinHM.get(entry.getKey()) != entry.getValue()){
+                        mergedJoin.addStatement(new Instruction(instructionNum, "phi", entry.getValue(), currJoinHM.get(entry.getKey())));
+                        mergedJoin.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
+                        instructionNum++;
+                    }
+                }
+
+                for(Map.Entry<String, Integer> entry : currJoinHM.entrySet()){ // generating phis by comparing currJoin to prevJoin or parent
+                    if(!prevJoinHM.containsKey(entry.getKey())){
+                        if(parentHM.containsKey(entry.getKey()) && parentHM.get(entry.getKey()) != entry.getValue()){
+                            mergedJoin.addStatement(new Instruction(instructionNum, "phi", parentHM.get(entry.getKey()), entry.getValue()));
+                            mergedJoin.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
+                            instructionNum++;
+                        }
+                    }
+                    else if(prevJoinHM.containsKey(entry.getKey()) && prevJoinHM.get(entry.getKey()) != entry.getValue()){
+                        mergedJoin.addStatement(new Instruction(instructionNum, "phi", prevJoinHM.get(entry.getKey()), entry.getValue()));
+                        mergedJoin.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
+                        instructionNum++;
+                    }
+                }
+                joinBBS.push(mergedJoin);
+                System.out.println("expec");
             }
-            joinBBS.push(joinBB);
+            else joinBBS.push(joinBB);
         }
         else{
             myTokenizer.Error("SyntaxErr missing fi");
         }
-
+        System.out.println("out");
 
 
         // process else block if any
@@ -496,6 +601,7 @@ public class Parser {
 
     }
     public Node relation(){
+        System.out.println("in relation");
         Node expr1 = expression();
         if(inputSym == Tokens.eqlToken || inputSym == Tokens.neqToken ||
                 inputSym == Tokens.lssToken || inputSym == Tokens.leqToken||
@@ -505,6 +611,7 @@ public class Parser {
             Node expr2 = expression();
             relOp.left = expr1;
             relOp.right = expr2;
+            System.out.println("leaving relation");
             return relOp;
         }
         else{

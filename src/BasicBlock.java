@@ -100,4 +100,17 @@ public class BasicBlock {
     public BasicBlock getRightBasicBlock(){
         return rightBasicBlock;
     }
+    public HashMap<String, LinkedList<Instruction>> deepCopyOfOPInstructions(HashMap<String, LinkedList<Instruction>> toCopy){
+        this.opInstructions = new HashMap<>(toCopy);
+        return opInstructions;
+    }
+    public HashMap<String, LinkedList<Instruction>> getOpInstructionsHM(){
+        return opInstructions;
+    }
+    public void deepCopyOfSymbolTable(HashMap<String, Integer> toCopy){
+        this.symbolTable.createDeepCopySymbolTable(toCopy);
+    }
+    public int getBBNum(){
+        return BBNum;
+    }
 }

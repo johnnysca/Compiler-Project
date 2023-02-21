@@ -1,14 +1,14 @@
 main
 var a,b,c,d,e;
-{ a <- call InputNum();
-b <- a;
-c <-b;
-d <- b+ c;
-e <- a + b;
+{ let a <- call InputNum();
+let b <- a;
+let c <-b;
+let d <- b+ c;
+let e <- a + b;
 if a < 0 then
-a <- d+e;
+let a <- d+e;
 else
-d<-e+1;
+let d<-e+1;
 fi;
 call OutputNum(a);
 call OutputNum(d)
