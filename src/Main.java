@@ -28,5 +28,13 @@ public class Main {
             }
             System.out.println();
         }
+        DFS(parser.BBS.get(0));
+    }
+    public static void DFS(BasicBlock basicBlock){
+        if(basicBlock == null) return;
+        System.out.println(basicBlock.getBBNum());
+        DFS(basicBlock.getLeftBasicBlock());
+
+        DFS(basicBlock.getRightBasicBlock());
     }
 }
