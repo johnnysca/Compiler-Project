@@ -1,0 +1,30 @@
+main
+var a, b, c, d, e, f;
+{
+let a<- call InputNum();
+let b <- 1;
+let c <-1;
+let d <- a;
+let e <- b + 6;
+let f <- b + d;
+
+if a > 5 then
+    let c <- 4;
+    let d <- 5;
+    if b < 7 then
+        let e <- d;
+        if c == 1 then
+            let f <- a
+        else
+            let a <- b
+        fi;
+    else
+        let g <- 2 * 5;
+        let b <- 4 / 2
+    fi;
+else
+    let f <- 0
+fi;
+call OutputNewLine();
+call OutputNum(a)
+}.

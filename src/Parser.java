@@ -8,11 +8,13 @@ public class Parser {
     private int instructionNum; // to track what instruction number this new instruction will be
     private BasicBlock bb; // current Basic Block obj
     private int basicBlockNum; // current Basic Block number
-    private HashMap<Integer, List<Integer>> BBMapping; // key: Basic Block Num, val: list of children Basic Blocks
+    public HashMap<Integer, List<Integer>> BBMapping; // key: Basic Block Num, val: list of children Basic Blocks
     public HashMap<Integer, BasicBlock> BBS; // key: Basic Block Num, val: actual Basic Block
     private Scanner scanner;
     private Stack<BasicBlock> ifBBS;
     private Stack<BasicBlock> joinBBS;
+    private BasicBlock lastSeenJoinBB;
+    private int joinBlocksNeeded;
     public Parser(String filename) {
         myTokenizer = new Tokenizer(filename);
         BBMapping = new HashMap<>();
@@ -38,7 +40,7 @@ public class Parser {
 
     public void checkFor(int token) {
         if (inputSym == token) next();
-        else myTokenizer.Error("SyntaxErr, Expected '" + myTokenizer.symbolTable.getStringFromToken(token) + "' but missing");
+        else myTokenizer.Error("SyntaxErr, Expected '" + token + "' but missing");
     }
     public void computation(){
         BBS.put(basicBlockNum, bb);
@@ -110,7 +112,7 @@ public class Parser {
         }
         else if(inputSym == Tokens.ifToken){
             ifStatement();
-            bb = joinBBS.pop();
+            bb = lastSeenJoinBB;
         }
         else if(inputSym == Tokens.whileToken){
             whileStatement();
@@ -144,21 +146,21 @@ public class Parser {
                 System.out.println(expr.right.data);
             else System.out.println(expr.right);
 
-            bb = BBS.get(basicBlockNum);
+            //bb = BBS.get(basicBlockNum);
 
             if (!expr.constant) { // root not a constant meaning its a +, -, *, / or identifier. constants would have already generated their instruction in factor
                 System.out.println("root not a constant " + expr.data);
                 if (expr.left == null) { // if the root is an identifier
                     System.out.println("no left expr " + expr.left);
                     if (!bb.identifierInstructionExists((String) expr.data)) {
-                        if (!bb.constantinstructionExists(0)) {
-                            bb = BBS.get(0);
+                        if (!BBS.get(0).constantinstructionExists(0)) {
+                            //bb = BBS.get(0);
                             System.out.println("No value was assigned to variable. Will be defaulted to 0");
-                            bb.addConstantToSymbolTable(0, instructionNum);
-                            bb.addStatement(new Instruction(instructionNum, bb.getOpCode('c'), 0)); // c just means constant
+                            BBS.get(0).addConstantToSymbolTable(0, instructionNum);
+                            BBS.get(0).addStatement(new Instruction(instructionNum, bb.getOpCode('c'), 0)); // c just means constant
                             instructionNum++;
                         }
-                        bb = BBS.get(basicBlockNum);
+                        //bb = BBS.get(basicBlockNum);
                         bb.addIdentifierToSymbolTable((String) desNode.data, BBS.get(0).getConstantInstructionNum(0));
                     } else {
                         rootInstruction = bb.getIdentifierInstructionNum((String) expr.data);
@@ -171,14 +173,14 @@ public class Parser {
                     System.out.println("left not a constant " + expr.left.data);
                     if (!bb.identifierInstructionExists((String) expr.left.data)) { // identifier used before it was assigned a value default to 0
                         System.out.println("left has no identifier instruction");
-                        if (!bb.constantinstructionExists(0)) { // default val to 0
-                            bb = BBS.get(0);
+                        if (!BBS.get(0).constantinstructionExists(0)) { // default val to 0
+                            //bb = BBS.get(0);
                             System.out.println("No value was assigned to variable. Will be defaulted to 0");
-                            bb.addConstantToSymbolTable(0, instructionNum);
-                            bb.addStatement(new Instruction(instructionNum, bb.getOpCode('c'), 0)); // c just means constant
+                            BBS.get(0).addConstantToSymbolTable(0, instructionNum);
+                            BBS.get(0).addStatement(new Instruction(instructionNum, bb.getOpCode('c'), 0)); // c just means constant
                             instructionNum++;
                         }
-                        bb = BBS.get(basicBlockNum);
+                        //bb = BBS.get(basicBlockNum);
                         bb.addIdentifierToSymbolTable((String) expr.left.data, BBS.get(0).getConstantInstructionNum(0));
                         leftInstruction = bb.getIdentifierInstructionNum((String) expr.left.data);
                     } else {
@@ -195,14 +197,14 @@ public class Parser {
                     System.out.println("right not a constant " + expr.right.data);
                     if (!bb.identifierInstructionExists((String) expr.right.data)) { // unassigned identifier on right side
                         System.out.println("right has no identifier instruction");
-                        if (!bb.constantinstructionExists(0)) { // default identifier value 0
-                            bb = BBS.get(0);
+                        if (!BBS.get(0).constantinstructionExists(0)) { // default identifier value 0
+                            //bb = BBS.get(0);
                             System.out.println("No value was assigned to variable. Will be defaulted to 0");
-                            bb.addConstantToSymbolTable(0, instructionNum);
-                            bb.addStatement(new Instruction(instructionNum, bb.getOpCode('c'), 0)); // c just means constant
+                            BBS.get(0).addConstantToSymbolTable(0, instructionNum);
+                            BBS.get(0).addStatement(new Instruction(instructionNum, bb.getOpCode('c'), 0)); // c just means constant
                             instructionNum++;
                         }
-                        bb = BBS.get(basicBlockNum);
+                        //bb = BBS.get(basicBlockNum);
                         bb.addIdentifierToSymbolTable((String) expr.right.data, BBS.get(0).getConstantInstructionNum(0));
                         rightInstruction = bb.getIdentifierInstructionNum((String) expr.right.data);
                     } else {
@@ -389,6 +391,7 @@ public class Parser {
         BasicBlock joinBB = null; // for when we can join blocks
 
         next(); // eat if
+        joinBlocksNeeded++; // added
         System.out.println("going to relation");
         Node rel = relation();
         System.out.println("back from relation");
@@ -429,77 +432,94 @@ public class Parser {
         bb.addStatement(new Instruction(instructionNum, relOp, instructionNum-1, -1)); // left = prev Instruction, right = -1 temporarily
         instructionNum++;
 
-        ifBBS.push(bb); // store current bb on stack. Wil be used to link ifs and elses later
-        // process if block
-        basicBlockNum++; // new BB for then
+        // process else block if any
+        if(joinBlocksNeeded <= 0) return;
+        basicBlockNum++;
         ifBB = new BasicBlock(basicBlockNum);
-        BBS.put(basicBlockNum, ifBB);
-        bb.setLeftBasicBlock(ifBB); // left child of parent will be if block
-
-        // create deep copy of CSE table
         ifBB.deepCopyOfOPInstructions(bb.getOpInstructionsHM());
         ifBB.deepCopyOfSymbolTable(bb.getSymbolTable().getIdentifierToInstructionNumHM());
 
+        BBS.put(basicBlockNum, ifBB);
+
+        if(bb.getLeftBasicBlock() == null){
+            bb.setLeftBasicBlock(ifBB);
+        }
+        ifBBS.push(bb); // store current basic block, will be used to set any elses
+        bb = ifBB;
+
         checkFor(Tokens.thenToken);
 
-        System.out.println("going back to statSequence from ifStatement");
-        statSequence(); // will return once if is done
-        System.out.println("back from statSequence in ifStatement");
-        // add branching instruction to skip else
-        bb.addStatement(new Instruction(instructionNum, "bra", -1, -1)); // will branch to the first phi in join. will reassign later
+        statSequence();
+
+        // generate branch for current block
+        bb.addStatement(new Instruction(instructionNum, "bra", -1, -1));
         instructionNum++;
 
-        bb = ifBBS.pop(); // get the parent block of if/else blocks
+        bb = ifBBS.pop();
+        if(joinBlocksNeeded <= 0) return;
 
         if(inputSym == Tokens.elseToken){
             next(); // eat else
+            if(joinBlocksNeeded <= 0) return;
             basicBlockNum++;
             elseBB = new BasicBlock(basicBlockNum);
-            BBS.put(basicBlockNum, elseBB);
-            bb.setRightBasicBlock(elseBB); // right child of parent will be else block
-            // create deep copy of CSE table
             elseBB.deepCopyOfOPInstructions(bb.getOpInstructionsHM());
             elseBB.deepCopyOfSymbolTable(bb.getSymbolTable().getIdentifierToInstructionNumHM());
+            BBS.put(basicBlockNum, elseBB);
+            if(bb.getRightBasicBlock() == null){
+                bb.setRightBasicBlock(elseBB);
+            }
+            ifBBS.push(bb);
+            bb = elseBB;
             statSequence();
-            if(elseBB.getStatements().size() == 0){ // add the empty instruction if no instruction was generated
+            if(elseBB.getStatements().size() == 0){ // generate empty instruction
                 elseBB.addStatement(new Instruction(instructionNum, "<empty>", -1, -1));
                 instructionNum++;
             }
+            bb = ifBBS.pop();
         }
 
-        if(inputSym == Tokens.fiToken){ // will need to generate join block and fill in
-            System.out.println("here");
+        if(inputSym == Tokens.fiToken){
             next(); // eat fi
+            // generate join Block
+            if(joinBlocksNeeded <= 0) return;
             basicBlockNum++;
             joinBB = new BasicBlock(basicBlockNum);
-            BBS.put(basicBlockNum, joinBB);
-            ifBB.setLeftBasicBlock(joinBB); // if's left child will be join block
             joinBB.deepCopyOfOPInstructions(bb.getOpInstructionsHM());
             joinBB.deepCopyOfSymbolTable(bb.getSymbolTable().getIdentifierToInstructionNumHM());
-            System.out.println("here2");
-            if(elseBB != null){ // there was an else block generated so compare if sym table to else sym table
-                System.out.println("in fi elseBB != null");
-                elseBB.setLeftBasicBlock(joinBB); // else's left child will be join block, compare if and else symbol tables to generate phis
-                // now compare symbol tables to generate phis
+            BBS.put(basicBlockNum, joinBB);
+            joinBlocksNeeded--;
+
+            if(elseBB != null){ // theres an else block so compare if to else symbol table
+                if(bb.getRightBasicBlock() == null){
+                    bb.setRightBasicBlock(elseBB);
+                }
+                if(ifBB.getLeftBasicBlock() == null){
+                    ifBB.setLeftBasicBlock(joinBB);
+                }
+                if(elseBB.getLeftBasicBlock() == null){
+                    elseBB.setLeftBasicBlock(joinBB);
+                }
                 HashMap<String, Integer> ifHM = ifBB.getSymbolTable().getIdentifierToInstructionNumHM();
                 HashMap<String, Integer> elseHM = elseBB.getSymbolTable().getIdentifierToInstructionNumHM();
-//                HashMap<String, Integer> parentHM = bb.getSymbolTable().getIdentifierToInstructionNumHM();
 
-                // compare if to else
                 for(Map.Entry<String, Integer> entry : ifHM.entrySet()){
-                    if(entry.getValue() != elseHM.get(entry.getKey())){ // generate phi
+                    if(entry.getValue() != elseHM.get(entry.getKey())){
                         joinBB.addStatement(new Instruction(instructionNum, "phi", entry.getValue(), elseHM.get(entry.getKey())));
                         joinBB.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
                         instructionNum++;
                     }
                 }
-
             }
-            else{ // there was no else, so parent symbol table will be compared to left child to generate phis
-                bb.setRightBasicBlock(joinBB);
-                // now compare symbol tables to generate phis
-                HashMap<String, Integer> parentHM = bb.getSymbolTable().getIdentifierToInstructionNumHM();
+            else{ // theres no else so compare if to parent symbol table
+                if(ifBB.getLeftBasicBlock() == null){
+                    ifBB.setLeftBasicBlock(joinBB);
+                }
+                if(bb.getRightBasicBlock() == null){
+                    bb.setRightBasicBlock(joinBB);
+                }
                 HashMap<String, Integer> ifHM = ifBB.getSymbolTable().getIdentifierToInstructionNumHM();
+                HashMap<String, Integer> parentHM = bb.getSymbolTable().getIdentifierToInstructionNumHM();
 
                 for(Map.Entry<String, Integer> entry : ifHM.entrySet()){
                     if(entry.getValue() != parentHM.get(entry.getKey())){
@@ -509,42 +529,37 @@ public class Parser {
                     }
                 }
             }
-            System.out.println("r");
-            System.out.println(inputSym);
-            if(!joinBBS.isEmpty()){
-
-                // join both basic blocks and compare symbol tables
-                BasicBlock prevJoin = joinBBS.pop();
-
-                HashMap<String, Integer> prevJoinHM = prevJoin.getSymbolTable().getIdentifierToInstructionNumHM();
-                HashMap<String, Integer> currJoinHM = joinBB.getSymbolTable().getIdentifierToInstructionNumHM();
-
+            if(lastSeenJoinBB != null){ // merge two joins to one
+                if(joinBlocksNeeded < 0) return;
                 basicBlockNum++;
-                BasicBlock mergedJoin = new BasicBlock(basicBlockNum); // join containing left and right joins
+                BasicBlock mergedJoin = new BasicBlock(basicBlockNum);
                 mergedJoin.deepCopyOfOPInstructions(bb.getOpInstructionsHM());
                 mergedJoin.deepCopyOfSymbolTable(bb.getSymbolTable().getIdentifierToInstructionNumHM());
-                prevJoin.setLeftBasicBlock(mergedJoin);
-                joinBB.setLeftBasicBlock(mergedJoin);
+                BBS.put(basicBlockNum, mergedJoin);
+                joinBlocksNeeded--;
 
-                for(Map.Entry<String, Integer> entry : prevJoinHM.entrySet()){
-                    if(entry.getValue() != currJoinHM.get(entry.getKey())){
-                        mergedJoin.addStatement(new Instruction(instructionNum, "phi", entry.getValue(), currJoinHM.get(entry.getKey())));
+                if(lastSeenJoinBB.getLeftBasicBlock() == null){
+                    lastSeenJoinBB.setLeftBasicBlock(mergedJoin);
+                }
+                if(joinBB.getLeftBasicBlock() == null){
+                    joinBB.setLeftBasicBlock(mergedJoin);
+                }
+                HashMap<String, Integer> lastSeenJoinHM = lastSeenJoinBB.getSymbolTable().getIdentifierToInstructionNumHM();
+                HashMap<String, Integer> joinBBHM = joinBB.getSymbolTable().getIdentifierToInstructionNumHM();
+
+                for(Map.Entry<String, Integer> entry : lastSeenJoinHM.entrySet()){
+                    if(entry.getValue() != joinBBHM.get(entry.getKey())){
+                        mergedJoin.addStatement(new Instruction(instructionNum, "phi", entry.getValue(), joinBBHM.get(entry.getKey())));
                         mergedJoin.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
                         instructionNum++;
                     }
                 }
-                joinBBS.push(mergedJoin);
+                lastSeenJoinBB = mergedJoin;
             }
-            else joinBBS.push(joinBB);
+            else{
+                lastSeenJoinBB = joinBB;
+            }
         }
-        else{
-            myTokenizer.Error("SyntaxErr missing fi");
-        }
-        System.out.println("out");
-
-
-        // process else block if any
-
         // join if and else blocks or join if and parent if theres no else
     }
     public void whileStatement(){
