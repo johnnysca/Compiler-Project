@@ -120,9 +120,9 @@ public class Parser {
         else if(inputSym == Tokens.returnToken){
             returnStatement();
         }
-        else{
-            myTokenizer.Error("Expected let, if, while, or return statement");
-        }
+//        else{
+//            myTokenizer.Error("Expected let, if, while, or return statement");
+//        }
     }
     public void assignment(){
         next(); // eat let
@@ -368,9 +368,6 @@ public class Parser {
             System.out.println("after");
             seenIdent = myTokenizer.getIdentifier();
             System.out.println(seenIdent);
-            System.out.println(bb.identifierInstructionExists(seenIdent));
-            System.out.println(bb.getIdentifierInstructionNum(seenIdent));
-            System.out.println("affffff");
             next(); // eat identifier
             checkFor(Tokens.closeParenToken);
         }
@@ -500,6 +497,24 @@ public class Parser {
                 if(elseBB.getLeftBasicBlock() == null){
                     elseBB.setLeftBasicBlock(joinBB);
                 }
+                // if elseBB.getBBNum() - lastSeenJoin.getBBNum() == 1 compare elseBB to lastSeenjoin to make curr JoinBB and set lastSeenJoin to joinBB
+                // else do whatever is here now below
+                if(lastSeenJoinBB != null && elseBB.getBBNum() - lastSeenJoinBB.getBBNum() == 1){
+                    lastSeenJoinBB.setLeftBasicBlock(joinBB);
+                    elseBB.setLeftBasicBlock(joinBB);
+                    HashMap<String, Integer> lastSeenJoinHM = lastSeenJoinBB.getSymbolTable().getIdentifierToInstructionNumHM();
+                    HashMap<String, Integer> elseHM = elseBB.getSymbolTable().getIdentifierToInstructionNumHM();
+
+                    for(Map.Entry<String, Integer> entry : lastSeenJoinHM.entrySet()){
+                        if(entry.getValue() != elseHM.get(entry.getKey())){
+                            joinBB.addStatement(new Instruction(instructionNum, "phi", entry.getValue(), elseHM.get(entry.getKey())));
+                            joinBB.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
+                            instructionNum++;
+                        }
+                    }
+                    lastSeenJoinBB = joinBB;
+                    return;
+                }
                 HashMap<String, Integer> ifHM = ifBB.getSymbolTable().getIdentifierToInstructionNumHM();
                 HashMap<String, Integer> elseHM = elseBB.getSymbolTable().getIdentifierToInstructionNumHM();
 
@@ -560,13 +575,13 @@ public class Parser {
                 lastSeenJoinBB = joinBB;
             }
         }
-        // join if and else blocks or join if and parent if theres no else
+        // join if and else blocks or join if and parent if theres no else does Dead Code Elimination in the process
     }
     public void whileStatement(){
 
     }
     public void returnStatement(){
-
+        checkFor(Tokens.returnToken);
     }
     public Node relation(){
         System.out.println("in relation");

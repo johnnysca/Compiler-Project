@@ -1,7 +1,7 @@
 main
 var a, b, c, d, e, f;
 {
-let a<- call InputNum();
+let a <- call InputNum();
 let b <- 1;
 let c <-1;
 let d <- a;
@@ -19,7 +19,7 @@ if a > 5 then
             let a <- b
         fi;
     else
-        let g <- 2 * 5;
+        let f <- 2 * 5;
         let b <- 4 / 2
     fi;
 else
