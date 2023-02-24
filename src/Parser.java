@@ -466,14 +466,19 @@ public class Parser {
             if(bb.getRightBasicBlock() == null){
                 bb.setRightBasicBlock(elseBB);
             }
-            ifBBS.push(bb);
+            //ifBBS.push(bb);
+            BasicBlock parent = bb;
             bb = elseBB;
+            System.out.println("going to stat seq from else in if");
             statSequence();
             if(elseBB.getStatements().size() == 0){ // generate empty instruction
                 elseBB.addStatement(new Instruction(instructionNum, "<empty>", -1, -1));
                 instructionNum++;
             }
-            bb = ifBBS.pop();
+            Instruction instruction = parent.getStatements().get(parent.getStatements().size()-1);
+            instruction.setRightInstruction(elseBB.getStatements().get(0).getInstructionNum());
+            parent.getStatements().set(parent.getStatements().size()-1, instruction);
+            //bb = ifBBS.pop();
         }
 
         if(inputSym == Tokens.fiToken){
@@ -512,6 +517,9 @@ public class Parser {
                             instructionNum++;
                         }
                     }
+                    Instruction instruction =  lastSeenJoinBB.getStatements().get(lastSeenJoinBB.getStatements().size()-1);
+                    instruction.setLeftInstruction(joinBB.getStatements().get(0).getInstructionNum());
+                    lastSeenJoinBB.getStatements().set(lastSeenJoinBB.getStatements().size()-1, instruction);
                     lastSeenJoinBB = joinBB;
                     return;
                 }
@@ -525,6 +533,13 @@ public class Parser {
                         instructionNum++;
                     }
                 }
+                Instruction instruction = ifBB.getStatements().get(ifBB.getStatements().size()-1);
+                instruction.setLeftInstruction(joinBB.getStatements().get(0).getInstructionNum());
+                ifBB.getStatements().set(ifBB.getStatements().size()-1, instruction);
+
+                instruction = bb.getStatements().get(bb.getStatements().size()-1);
+                instruction.setRightInstruction(elseBB.getStatements().get(0).getInstructionNum());
+                bb.getStatements().set(bb.getStatements().size()-1, instruction);
             }
             else{ // theres no else so compare if to parent symbol table
                 if(ifBB.getLeftBasicBlock() == null){
@@ -543,6 +558,13 @@ public class Parser {
                         instructionNum++;
                     }
                 }
+                Instruction instruction = ifBB.getStatements().get(ifBB.getStatements().size()-1);
+                instruction.setLeftInstruction(joinBB.getStatements().get(0).getInstructionNum());
+                ifBB.getStatements().set(ifBB.getStatements().size()-1, instruction);
+
+                instruction = bb.getStatements().get(bb.getStatements().size()-1);
+                instruction.setRightInstruction(joinBB.getStatements().get(0).getInstructionNum());
+                bb.getStatements().set(bb.getStatements().size()-1, instruction);
             }
             if(lastSeenJoinBB != null){ // merge two joins to one
                 if(joinBlocksNeeded < 0) return;
@@ -569,6 +591,9 @@ public class Parser {
                         instructionNum++;
                     }
                 }
+                Instruction instruction =  lastSeenJoinBB.getStatements().get(lastSeenJoinBB.getStatements().size()-1);
+                instruction.setLeftInstruction(mergedJoin.getStatements().get(0).getInstructionNum());
+                lastSeenJoinBB.getStatements().set(lastSeenJoinBB.getStatements().size()-1, instruction);
                 lastSeenJoinBB = mergedJoin;
             }
             else{

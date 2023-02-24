@@ -31,6 +31,12 @@ public class Instruction {
     public int getInstructionNum(){
         return instructionNum;
     }
+    public void setLeftInstruction(int instruction){
+        this.leftInstruction = instruction;
+    }
+    public void setRightInstruction(int instruction){
+        this.rightInstruction = instruction;
+    }
     public boolean equals(Instruction instruction2){
         return this.getLeftInstruction() == instruction2.getLeftInstruction() && this.getRightInstruction() == instruction2.getRightInstruction();
     }
