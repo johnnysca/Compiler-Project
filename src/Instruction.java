@@ -22,6 +22,9 @@ public class Instruction {
         this.val = val;
         this.isConstant = true;
     }
+    public String getOpCode(){
+        return opCode;
+    }
     public int getLeftInstruction(){
         return leftInstruction;
     }

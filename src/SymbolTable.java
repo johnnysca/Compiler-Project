@@ -12,6 +12,7 @@ public class SymbolTable {
     private HashMap<Integer, Integer> constantToInstructionNum;
     private HashMap<String, Integer> identifierToInstructionNum;
     private HashMap<String, Integer> predefinedFunctions;
+    private HashMap<String, Integer> phiSymbolTable;
 
     SymbolTable(){
         keywords = new HashMap<>();
@@ -24,6 +25,7 @@ public class SymbolTable {
         constantToInstructionNum = new HashMap<>();
         identifierToInstructionNum = new HashMap<>();
         predefinedFunctions = new HashMap<>();
+        phiSymbolTable = new HashMap<>();
 
         keywords.put("main", Tokens.mainToken);
         keywords.put("var", Tokens.varToken);
@@ -128,5 +130,11 @@ public class SymbolTable {
     }
     public void createDeepCopySymbolTable(HashMap<String, Integer> toCopy){
         this.identifierToInstructionNum = new HashMap<>(toCopy);
+    }
+    public boolean inPhiSymbolTable(String key){
+        return phiSymbolTable.containsKey(key);
+    }
+    public void addPhiToSymbolTable(String key, int val){
+        phiSymbolTable.put(key, val);
     }
 }

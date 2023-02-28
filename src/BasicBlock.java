@@ -113,4 +113,10 @@ public class BasicBlock {
     public int getBBNum(){
         return BBNum;
     }
+    public boolean containsPhi(String key){
+        return symbolTable.inPhiSymbolTable(key);
+    }
+    public void addToPhiTable(String key, int val){
+        symbolTable.addPhiToSymbolTable(key, val);
+    }
 }

@@ -146,21 +146,18 @@ public class Parser {
                 System.out.println(expr.right.data);
             else System.out.println(expr.right);
 
-            //bb = BBS.get(basicBlockNum);
-
             if (!expr.constant) { // root not a constant meaning its a +, -, *, / or identifier. constants would have already generated their instruction in factor
                 System.out.println("root not a constant " + expr.data);
                 if (expr.left == null) { // if the root is an identifier
+                    if(bb.containsPhi((String)desNode.data)) return;
                     System.out.println("no left expr " + expr.left);
                     if (!bb.identifierInstructionExists((String) expr.data)) {
                         if (!BBS.get(0).constantinstructionExists(0)) {
-                            //bb = BBS.get(0);
                             System.out.println("No value was assigned to variable. Will be defaulted to 0");
                             BBS.get(0).addConstantToSymbolTable(0, instructionNum);
                             BBS.get(0).addStatement(new Instruction(instructionNum, bb.getOpCode('c'), 0)); // c just means constant
                             instructionNum++;
                         }
-                        //bb = BBS.get(basicBlockNum);
                         bb.addIdentifierToSymbolTable((String) desNode.data, BBS.get(0).getConstantInstructionNum(0));
                     } else {
                         rootInstruction = bb.getIdentifierInstructionNum((String) expr.data);
@@ -174,13 +171,11 @@ public class Parser {
                     if (!bb.identifierInstructionExists((String) expr.left.data)) { // identifier used before it was assigned a value default to 0
                         System.out.println("left has no identifier instruction");
                         if (!BBS.get(0).constantinstructionExists(0)) { // default val to 0
-                            //bb = BBS.get(0);
                             System.out.println("No value was assigned to variable. Will be defaulted to 0");
                             BBS.get(0).addConstantToSymbolTable(0, instructionNum);
                             BBS.get(0).addStatement(new Instruction(instructionNum, bb.getOpCode('c'), 0)); // c just means constant
                             instructionNum++;
                         }
-                        //bb = BBS.get(basicBlockNum);
                         bb.addIdentifierToSymbolTable((String) expr.left.data, BBS.get(0).getConstantInstructionNum(0));
                         leftInstruction = bb.getIdentifierInstructionNum((String) expr.left.data);
                     } else {
@@ -198,13 +193,11 @@ public class Parser {
                     if (!bb.identifierInstructionExists((String) expr.right.data)) { // unassigned identifier on right side
                         System.out.println("right has no identifier instruction");
                         if (!BBS.get(0).constantinstructionExists(0)) { // default identifier value 0
-                            //bb = BBS.get(0);
                             System.out.println("No value was assigned to variable. Will be defaulted to 0");
                             BBS.get(0).addConstantToSymbolTable(0, instructionNum);
                             BBS.get(0).addStatement(new Instruction(instructionNum, bb.getOpCode('c'), 0)); // c just means constant
                             instructionNum++;
                         }
-                        //bb = BBS.get(basicBlockNum);
                         bb.addIdentifierToSymbolTable((String) expr.right.data, BBS.get(0).getConstantInstructionNum(0));
                         rightInstruction = bb.getIdentifierInstructionNum((String) expr.right.data);
                     } else {
@@ -304,7 +297,6 @@ public class Parser {
             System.out.println("going to designator");
             ret = designator();
             System.out.println("back from designator");
-            //bb = BBS.get(basicBlockNum);
         }
         else if(inputSym == Tokens.number){ // generate instruction for constants here if it is not already in BB0
             BasicBlock basicBlock0 = BBS.get(0);
@@ -359,14 +351,15 @@ public class Parser {
             next(); // eat outputNum
             seenIdent = myTokenizer.getIdentifier();
             System.out.println("seee " + seenIdent);
-            bb.addStatement(new Instruction(instructionNum, "write", -1, -1));
-            bb.addIdentifierToSymbolTable(seenIdent, instructionNum);
-            instructionNum++;
+            System.out.println(bb.getBBNum());
 
             System.out.println("before");
             checkFor(Tokens.openParenToken);
             System.out.println("after");
             seenIdent = myTokenizer.getIdentifier();
+            bb.addStatement(new Instruction(instructionNum, "write", bb.getIdentifierInstructionNum(seenIdent), -1));
+            bb.addIdentifierToSymbolTable(seenIdent, instructionNum);
+            instructionNum++;
             System.out.println(seenIdent);
             next(); // eat identifier
             checkFor(Tokens.closeParenToken);
@@ -466,7 +459,6 @@ public class Parser {
             if(bb.getRightBasicBlock() == null){
                 bb.setRightBasicBlock(elseBB);
             }
-            //ifBBS.push(bb);
             BasicBlock parent = bb;
             bb = elseBB;
             System.out.println("going to stat seq from else in if");
@@ -475,10 +467,10 @@ public class Parser {
                 elseBB.addStatement(new Instruction(instructionNum, "<empty>", -1, -1));
                 instructionNum++;
             }
+
             Instruction instruction = parent.getStatements().get(parent.getStatements().size()-1);
             instruction.setRightInstruction(elseBB.getStatements().get(0).getInstructionNum());
             parent.getStatements().set(parent.getStatements().size()-1, instruction);
-            //bb = ifBBS.pop();
         }
 
         if(inputSym == Tokens.fiToken){
@@ -514,6 +506,7 @@ public class Parser {
                         if(entry.getValue() != elseHM.get(entry.getKey())){
                             joinBB.addStatement(new Instruction(instructionNum, "phi", entry.getValue(), elseHM.get(entry.getKey())));
                             joinBB.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
+                            joinBB.addToPhiTable(entry.getKey(), instructionNum);
                             instructionNum++;
                         }
                     }
@@ -530,16 +523,14 @@ public class Parser {
                     if(entry.getValue() != elseHM.get(entry.getKey())){
                         joinBB.addStatement(new Instruction(instructionNum, "phi", entry.getValue(), elseHM.get(entry.getKey())));
                         joinBB.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
+                        joinBB.addToPhiTable(entry.getKey(), instructionNum);
                         instructionNum++;
                     }
                 }
+                // setting bra instructions
                 Instruction instruction = ifBB.getStatements().get(ifBB.getStatements().size()-1);
                 instruction.setLeftInstruction(joinBB.getStatements().get(0).getInstructionNum());
                 ifBB.getStatements().set(ifBB.getStatements().size()-1, instruction);
-
-                instruction = bb.getStatements().get(bb.getStatements().size()-1);
-                instruction.setRightInstruction(elseBB.getStatements().get(0).getInstructionNum());
-                bb.getStatements().set(bb.getStatements().size()-1, instruction);
             }
             else{ // theres no else so compare if to parent symbol table
                 if(ifBB.getLeftBasicBlock() == null){
@@ -555,6 +546,7 @@ public class Parser {
                     if(entry.getValue() != parentHM.get(entry.getKey())){
                         joinBB.addStatement(new Instruction(instructionNum, "phi", entry.getValue(), parentHM.get(entry.getKey())));
                         joinBB.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
+                        joinBB.addToPhiTable(entry.getKey(), instructionNum);
                         instructionNum++;
                     }
                 }
@@ -588,10 +580,11 @@ public class Parser {
                     if(entry.getValue() != joinBBHM.get(entry.getKey())){
                         mergedJoin.addStatement(new Instruction(instructionNum, "phi", entry.getValue(), joinBBHM.get(entry.getKey())));
                         mergedJoin.addIdentifierToSymbolTable(entry.getKey(), instructionNum);
+                        mergedJoin.addToPhiTable(entry.getKey(), instructionNum);
                         instructionNum++;
                     }
                 }
-                Instruction instruction =  lastSeenJoinBB.getStatements().get(lastSeenJoinBB.getStatements().size()-1);
+                Instruction instruction = lastSeenJoinBB.getStatements().get(lastSeenJoinBB.getStatements().size()-1);
                 instruction.setLeftInstruction(mergedJoin.getStatements().get(0).getInstructionNum());
                 lastSeenJoinBB.getStatements().set(lastSeenJoinBB.getStatements().size()-1, instruction);
                 lastSeenJoinBB = mergedJoin;
