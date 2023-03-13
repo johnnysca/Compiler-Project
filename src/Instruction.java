@@ -40,6 +40,9 @@ public class Instruction {
     public void setRightInstruction(int instruction){
         this.rightInstruction = instruction;
     }
+    public int getVal(){
+        return val;
+    }
     public boolean equals(Instruction instruction2){
         return this.getLeftInstruction() == instruction2.getLeftInstruction() && this.getRightInstruction() == instruction2.getRightInstruction();
     }

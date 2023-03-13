@@ -1,0 +1,22 @@
+main
+var x,y,h,i,j,k;
+{
+    let i<-call InputNum();
+    let x<-2 + 3;
+    let y<-3;
+    let j<- i + x + y;
+
+    let x <- j;
+    let y <- x + j + i + y;
+
+    let h <- call InputNum();
+    let h <- h * h / h - h + h;
+    let k <- i * x / y + j - h;
+
+    call OutputNum(x);
+    call OutputNum(y);
+    call OutputNum(h);
+    call OutputNum(i);
+    call OutputNum(j);
+    call OutputNum(k);
+}.
