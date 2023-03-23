@@ -71,7 +71,12 @@ public class Main {
                 String opCode = instruction.getOpCode();
                 String pound = " #";
                 int val = instruction.getVal();
-                sb.append(instructionNum).append(": ").append(opCode).append(pound).append(val);
+                String base = instruction.getBase();
+                System.out.println("BASEEEEE " + base);
+                if(base == null)
+                    sb.append(instructionNum).append(": ").append(opCode).append(pound).append(val);
+                else
+                    sb.append(instructionNum).append(": ").append(opCode).append(pound).append(base);
                 start++;
                 if(start != end) sb.append(" | ");
 

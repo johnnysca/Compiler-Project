@@ -1,10 +1,11 @@
 public class Instruction {
     private int instructionNum;
-    private String opCode; // will be either 'c', '+', '-', '*', '/' ----- c stands for constant
+    private String opCode; // const, add, sub, mul, div, phi, adda, load, store
     private int leftInstruction;
     private int rightInstruction;
     private int val; // a constants value
     private boolean isConstant;
+    private String base; // base for arrays
 
     Instruction(int instructionNum, String opCode, int leftInstruction, int rightInstruction){ // add the current
         this.instructionNum = instructionNum;
@@ -21,6 +22,17 @@ public class Instruction {
         this.rightInstruction = -1;
         this.val = val;
         this.isConstant = true;
+    }
+    Instruction(int instructionNum, String c, String base){ // for base array
+        this.instructionNum = instructionNum;
+        this.opCode = c;
+        this.base = base;
+    }
+    Instruction(int instructionNum, String kill){ // for kill instructions
+        this.instructionNum = instructionNum;
+        this.opCode = kill;
+        this.leftInstruction = -1;
+        this.rightInstruction = -1;
     }
     public String getOpCode(){
         return opCode;
@@ -43,11 +55,14 @@ public class Instruction {
     public int getVal(){
         return val;
     }
+    public String getBase(){
+        return base;
+    }
     public boolean equals(Instruction instruction2){
         return this.getLeftInstruction() == instruction2.getLeftInstruction() && this.getRightInstruction() == instruction2.getRightInstruction();
     }
     public String toString(){
-        return "InstructionNum: " + instructionNum + " opcode: " + opCode + " leftInstruction: " + leftInstruction + " rightInstruction: " + rightInstruction + " val: " + val;
+        return "InstructionNum: " + instructionNum + " opcode: " + opCode + " leftInstruction: " + leftInstruction + " rightInstruction: " + rightInstruction + " base: " + base + " val: " + val;
     }
 }
 

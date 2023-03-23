@@ -1,0 +1,12 @@
+main var a, b, d, e;
+{
+    let a <- call InputNum();
+    let b <- a;
+    let d <- b + b;
+    if d < 10 then
+        let e <- d
+    else
+        let e <- b
+    fi;
+    call OutputNum(e)
+}.

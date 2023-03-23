@@ -1,0 +1,14 @@
+main
+var x,i,j;
+array[4] a;
+{
+    let x<-call InputNum();
+    let i<-0;
+    let j<-call InputNum();
+    let a[i] <- x;
+    while a[i]<10 do
+        let a[j] <- a[j] + 1;
+    od;
+    call OutputNum(a[i]);
+    call OutputNum(a[j]);
+}.

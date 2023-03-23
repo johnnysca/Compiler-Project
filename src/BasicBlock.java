@@ -16,6 +16,7 @@ public class BasicBlock {
     public boolean isElse;
     public boolean isJoin;
     public boolean isThen;
+    public int numKills;
     BasicBlock(){
         statements = new ArrayList<>();
         BBNum = 0;
@@ -30,6 +31,7 @@ public class BasicBlock {
         opInstructions.put("div", new LinkedList<>());
         numPhis = 0;
         isWhile = false;
+        numKills = 0;
     }
     BasicBlock(int BBNum){
         statements = new ArrayList<>();
@@ -42,6 +44,7 @@ public class BasicBlock {
         opInstructions.put("sub", new LinkedList<>());
         opInstructions.put("mul", new LinkedList<>());
         opInstructions.put("div", new LinkedList<>());
+        opInstructions.put("load", new LinkedList<>());
         numPhis = 0;
         isWhile = false;
     }
@@ -49,6 +52,12 @@ public class BasicBlock {
         statements.add(instruction);
     }
     public void addPhi(int idx, Instruction instruction){
+        statements.add(idx, instruction);
+    }
+    public void addKill(int idx, Instruction instruction){
+        statements.add(idx, instruction);
+    }
+    public void addLoad(int idx, Instruction instruction){
         statements.add(idx, instruction);
     }
     public SymbolTable getSymbolTable(){
@@ -83,12 +92,24 @@ public class BasicBlock {
         if(ll == null) return false;
         for(Instruction i : ll){
             if(checkIfSame(i, instruction)){
-                System.out.println("true");
                 opInstructionNum = i.getInstructionNum();
                 return true;
             }
         }
-        System.out.println("false");
+        return false;
+    }
+    public boolean opInstructionExists(String key, Instruction instruction, String arr){
+        LinkedList<Instruction> ll = opInstructions.get(key);
+        if(ll == null) return false;
+        for(Instruction i : ll){
+            if(checkIfSame(i, instruction)){
+                opInstructionNum = i.getInstructionNum();
+                return true;
+            }
+            if(i.getOpCode().equals("store") && symbolTable.hasStores.containsKey(arr) && i.getInstructionNum() == symbolTable.hasStores.get(arr)){
+                return false;
+            }
+        }
         return false;
     }
     public void addOpInstruction(String key, Instruction value){ // add the instruction generated to the opcode Linked list
@@ -118,10 +139,7 @@ public class BasicBlock {
     public BasicBlock getRightBasicBlock(){
         return rightBasicBlock;
     }
-    // return for deepCopyOPInstr originally HashMap<String, LinkedList<Instruction>>
     public void deepCopyOfOPInstructions(HashMap<String, LinkedList<Instruction>> toCopy){
-//        this.opInstructions = new HashMap<>(toCopy);
-//        return opInstructions;
         for(Map.Entry<String, LinkedList<Instruction>> entry : toCopy.entrySet()){
             this.opInstructions.put(new String(entry.getKey()), new LinkedList<>(entry.getValue()));
         }
@@ -130,9 +148,23 @@ public class BasicBlock {
         return opInstructions;
     }
     public void deepCopyOfSymbolTable(HashMap<String, Integer> toCopy){
-        //this.symbolTable.createDeepCopySymbolTable(toCopy);
         for(Map.Entry<String, Integer> entry : toCopy.entrySet()){
             this.symbolTable.getIdentifierToInstructionNumHM().put(new String(entry.getKey()), entry.getValue());
+        }
+    }
+    public void deepCopyArrayAddrTable(HashMap<String, Integer> toCopy){
+        for(Map.Entry<String, Integer> entry : toCopy.entrySet()){
+            this.symbolTable.arrayToAddr.put(new String(entry.getKey()), entry.getValue());
+        }
+    }
+    public void deepCopyArrayDimensionTable(HashMap<String, List<Integer>> toCopy){
+        for(Map.Entry<String, List<Integer>> entry : toCopy.entrySet()){
+            this.symbolTable.arrayToDimensions.put(new String(entry.getKey()), new ArrayList<>(entry.getValue()));
+        }
+    }
+    public void deepCopyStores(HashMap<String, Integer> toCopy){
+        for(Map.Entry<String, Integer> entry : toCopy.entrySet()){
+            this.symbolTable.hasStores.put(new String(entry.getKey()), entry.getValue());
         }
     }
     public int getBBNum(){

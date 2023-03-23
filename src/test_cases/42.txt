@@ -1,0 +1,21 @@
+main
+var mainA, callb, InputNumx, lety, ifz;
+{
+    let mainA <- call InputNum();
+    let InputNumx <- mainA + 1;
+    let InputNumx <- mainA + 1;
+
+    if mainA<0 then
+        let lety <- mainA + 2
+    else
+        let lety <- mainA + 1
+    fi;
+
+    let ifz <- lety + 3;
+
+    call OutputNum(mainA);
+    call OutputNum(callb);
+    call OutputNum(InputNumx);
+    call OutputNum(lety);
+    call OutputNum(ifz)
+}.

@@ -1,0 +1,14 @@
+main
+var a, b, c;
+array[4] x;
+{
+    let a <- call InputNum ();
+    let b <- a;
+    let c <- call InputNum ();
+    if b <= 2 then
+        let x[c] <- a + 2;
+    else
+        let x[c] <- b + 2;
+    fi;
+    call OutputNum(x[c])
+}.

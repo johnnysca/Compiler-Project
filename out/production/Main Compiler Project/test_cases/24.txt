@@ -1,0 +1,13 @@
+main
+var x,y,i,j;
+{
+    let i<-call InputNum();
+    let x<-0;
+    let y<-0;
+    while x < 10 do
+        let x <- x - 1;
+        let y <- i + x;
+    od;
+    let j <- i + x;
+    call OutputNum(j)
+}.

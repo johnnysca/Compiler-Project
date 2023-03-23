@@ -1,0 +1,8 @@
+main
+array[5][5] x;
+array[3] y;
+{
+    let y[1] <- call InputNum();
+    let x[1][2] <- y[1] * y[1];
+    call OutputNum(y[1])
+}.

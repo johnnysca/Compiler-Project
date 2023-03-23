@@ -1,0 +1,13 @@
+
+
+main var i,j,x,y; {
+    let y <- 1;
+    if y < 1 then
+        let x <- i;
+        let y <-  1 ;
+        while x < 10 do
+            let x <- i;
+            let y <- 1 ;
+        od;
+    fi;
+}.

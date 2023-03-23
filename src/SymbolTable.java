@@ -1,31 +1,40 @@
 import java.util.HashMap;
+import java.util.List;
 public class SymbolTable {
-    private HashMap<String, Integer> keywords;
-    private HashMap<Integer, String> TokenToString;
+    private HashMap<String, Integer> keywords; // holds languages keywords
+    //private HashMap<Integer, String> TokenToString;
     private HashMap<Integer, String> relOps;
     private HashMap<String, Integer> vars;
 
-    private HashMap<String, Integer> strings;
+    //private HashMap<String, Integer> strings;
 
-    private HashMap<Integer, String> ids;
+    //private HashMap<Integer, String> ids;
     private HashMap<Character, String> opcodeToString;
     private HashMap<Integer, Integer> constantToInstructionNum;
     private HashMap<String, Integer> identifierToInstructionNum;
     private HashMap<String, Integer> predefinedFunctions;
     private HashMap<String, Integer> phiSymbolTable;
+    public HashMap<String, List<Integer>> arrayToDimensions; // track dimensions of array
+    public HashMap<String, Integer> arrayToAddr; // track arrays address
+    public HashMap<String, Integer> arrayKills; // track what arrays need kills
+    public HashMap<String, Integer> hasStores; // track which arrays have a store and stop CSE search when we see a store for the current array
 
     SymbolTable(){
         keywords = new HashMap<>();
-        TokenToString = new HashMap<>();
+        //TokenToString = new HashMap<>();
         relOps = new HashMap<>();
         vars = new HashMap<>();
-        strings = new HashMap<>();
-        ids = new HashMap<>();
+        //strings = new HashMap<>();
+        //ids = new HashMap<>();
         opcodeToString = new HashMap<>();
         constantToInstructionNum = new HashMap<>();
         identifierToInstructionNum = new HashMap<>();
         predefinedFunctions = new HashMap<>();
         phiSymbolTable = new HashMap<>();
+        arrayToDimensions = new HashMap<>();
+        arrayToAddr = new HashMap<>();
+        arrayKills = new HashMap<>();
+        hasStores = new HashMap<>();
 
         keywords.put("main", Tokens.mainToken);
         keywords.put("var", Tokens.varToken);
@@ -44,22 +53,22 @@ public class SymbolTable {
         keywords.put("function", Tokens.funcToken);
         keywords.put("procedure", Tokens.procToken);
 
-        TokenToString.put(Tokens.mainToken, "main" );
-        TokenToString.put(Tokens.varToken, "var");
-        TokenToString.put(Tokens.thenToken, "then");
-        TokenToString.put(Tokens.doToken, "do");
-        TokenToString.put(Tokens.odToken, "od");
-        TokenToString.put(Tokens.fiToken, "fi");
-        TokenToString.put(Tokens.elseToken, "else");
-        TokenToString.put(Tokens.letToken, "let");
-        TokenToString.put(Tokens.callToken, "call");
-        TokenToString.put(Tokens.ifToken, "if");
-        TokenToString.put(Tokens.whileToken, "while");
-        TokenToString.put(Tokens.returnToken, "return");
-        TokenToString.put(Tokens.arrToken, "array");
-        TokenToString.put(Tokens.voidToken, "void");
-        TokenToString.put(Tokens.funcToken, "function");
-        TokenToString.put(Tokens.procToken, "procedure");
+//        TokenToString.put(Tokens.mainToken, "main" );
+//        TokenToString.put(Tokens.varToken, "var");
+//        TokenToString.put(Tokens.thenToken, "then");
+//        TokenToString.put(Tokens.doToken, "do");
+//        TokenToString.put(Tokens.odToken, "od");
+//        TokenToString.put(Tokens.fiToken, "fi");
+//        TokenToString.put(Tokens.elseToken, "else");
+//        TokenToString.put(Tokens.letToken, "let");
+//        TokenToString.put(Tokens.callToken, "call");
+//        TokenToString.put(Tokens.ifToken, "if");
+//        TokenToString.put(Tokens.whileToken, "while");
+//        TokenToString.put(Tokens.returnToken, "return");
+//        TokenToString.put(Tokens.arrToken, "array");
+//        TokenToString.put(Tokens.voidToken, "void");
+//        TokenToString.put(Tokens.funcToken, "function");
+//        TokenToString.put(Tokens.procToken, "procedure");
 
         relOps.put(Tokens.eqlToken, "==");
         relOps.put(Tokens.neqToken, "!=");
@@ -84,17 +93,13 @@ public class SymbolTable {
     public int getKeywordId(String s){
         return keywords.get(s);
     }
-    public String getStringFromToken(int token) { return TokenToString.get(token); }
+    //public String getStringFromToken(int token) { return TokenToString.get(token); }
     public String getRelOp(int token) { return relOps.get(token); }
     public void insertToSymbolTable(String varName, Integer val){
         vars.put(varName, val);
     }
-    public String IdToString(int id){
-        return ids.get(id);
-    }
-    public int StringToId(String s){
-        return strings.get(s);
-    }
+    //public String IdToString(int id){return ids.get(id);}
+    //public int StringToId(String s){return strings.get(s);}
     public int lookup(String key){
         return vars.get(key);
     }
