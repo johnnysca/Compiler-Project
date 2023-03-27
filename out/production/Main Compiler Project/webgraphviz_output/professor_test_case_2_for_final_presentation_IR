@@ -1,0 +1,21 @@
+digraph G {
+BB0 [shape=record, label="<b>BB0| { 0: const #4 | 1: const #BASE | 2: const #a_addr | 3: const #b_addr | 7: const #0 | 12: const #1 | 16: const #2 | 20: const #3 }}"];
+BB0:s -> BB1:n;
+BB1 [shape=record, label="<b>BB1| { 4: read | 5: read | 6: read | 8: mul (7) (0) | 9: add (1) (2) | 10: adda (8) (9) | 11: store (4) (10) | 13: mul (12) (0) | 14: adda (13) (9) | 15: store (4) (14) | 17: mul (16) (0) | 18: adda (17) (9) | 19: store (4) (18) | 21: mul (20) (0) | 22: adda (21) (9) | 23: store (4) (22) | 24: mul (4) (0) | 25: adda (24) (9) | 26: load (25) | 27: add (26) (5) | 28: add (26) (12) }}"];
+BB1:s -> BB2:n;
+BB2 [shape=record, label="<b>BB2| { 45: kill a | 31: phi (5) (32) | 33: phi (28) (46) | 37: phi (27) (43) | 46: load (26) | 29: cmp (46) (12) | 30: bge (29) (50) }}"];
+BB2:s -> BB3:n [label="dom", style="dotted", color="blue"];
+BB2:s -> BB3:n [label="fall-through"];
+BB3 [shape=record, label="<b>BB3| { 32: add (31) (12) | 34: cmp (4) (32) | 35: bge (34) (44) }}"];
+BB3:s -> BB4:n [label="dom", style="dotted", color="blue"];
+BB3:s -> BB4:n [label="fall-through"];
+BB4 [shape=record, label="<b>BB4| { 36: add (46) (31) | 38: mul (32) (0) | 39: adda (38) (9) | 40: add (33) (12) | 41: store (40) (39) | 42: bra (44) }}"];
+BB4:s -> BB5:n [label="branch"];
+BB5 [shape=record, label="<b>BB5| { 44: kill a | 43: phi (36) (27) | 47: bra (45) }}"];
+BB5:s -> BB2:n [label="branch", color="red"];
+BB3:s -> BB5:n [label="dom", style="dotted", color="blue"];
+BB3:s -> BB5:n [label="branch"];
+BB2:s -> BB6:n [label="dom", style="dotted", color="blue"];
+BB2:s -> BB6:n [label="follow"];
+BB6 [shape=record, label="<b>BB6| { 50: end }}"];
+}
